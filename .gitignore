@@ -1,0 +1,186 @@
+# 개발 환경
+.env
+.env.*
+!.env.example
+
+# 의존성
+/node_modules
+/.pnp
+.pnp.js
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# 테스트
+/.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# 빌드 산출물
+/build
+/dist
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Next.js
+/.next/
+/out/
+
+# 프로덕션
+/build
+
+# 기타
+.DS_Store
+*.pem
+
+# 디버그 로그
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pip-log.txt
+
+# IDE 관련
+.idea/
+.vscode/
+*.swp
+*.swo
+.project
+.classpath
+
+# 임시 파일
+*.log
+*.tmp
+*.temp
+
+# 시스템 파일
+Thumbs.db
+.DS_Store
+
+# Python 가상 환경
+.venv
+venv/
+ENV/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# celery
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# dotenv
+.env
+
+# virtualenv
+.venv
+venv/
+ENV/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+
+# Pyre type checker
+.pyre/
+
+# pytype static type analyzer
+.pytype/
+
+# Cython debug symbols
+cython_debug/
+
+# PyCharm
+.idea/
+
+# VS Code
+.vscode/
+
+# React/Next.js specific
+.next/
+out/
+.cache/
+.vercel
+
+# PWA files
+**/public/sw.js
+**/public/workbox-*.js
+**/public/worker-*.js
+**/public/sw.js.map
+**/public/workbox-*.js.map
+**/public/worker-*.js.map
+
+# FastAPI
+__pycache__/
+*.pyc
+
+# 데이터베이스
+*.sqlite3
+*.db
+
+# 로그 파일
+*.log
+
+# 백업 파일
+*.bak
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+
+# npm
+npm-debug.log
+package-lock.json
+
+# yarn
+yarn-error.log
+yarn.lock
+
+# Webpack
+.webpack/
+
+# Jest
+coverage/
+
+# TypeScript
+*.tsbuildinfo
+
+# ESLint
+.eslintcache

@@ -1,0 +1,73 @@
+openapi: 3.0.0
+info:
+  title: Neonadeuli API
+  version: 1.0.0
+  description: Neonadeuli 서비스를 위한 API 명세
+servers:
+  - url: https://api.neonadeuli.com/v1
+paths:
+  /users:
+    get:
+      summary: 사용자 목록 조회
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+          description: 페이지 번호
+      responses:
+        '200':
+          description: 성공적인 응답
+          content:
+            application/json:    
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+                  total:
+                    type: integer
+    post:
+      summary: 새 사용자 생성
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewUser'
+      responses:
+        '201':
+          description: 사용자 생성 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        email:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    NewUser:
+      type: object
+      required:
+        - username
+        - email
+      properties:
+        username:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+          format: password
