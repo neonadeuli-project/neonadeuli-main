@@ -1,22 +1,62 @@
-name: Close associated issue
+name: Close Associated Issue and Link PR
 
 on:
   pull_request:
+    types: [closed]
     branches:
-      - dev
-    types:
-      - closed
+      - develop
+      - 'feature/**'
+      - 'hotfix/**'
+
 jobs:
-  close-issue:
+  close-issue-and-link:
     runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true
     steps:
-    - name: Close associated issue
-      run: |
-        PR_NUMBER=${{ github.event.pull_request.number }}
-        PR_URL="https://api.github.com/repos/${{ github.repository }}/pulls/$PR_NUMBER"
-        PR_BODY=$(curl -s -H "Authorization: token ${{ secrets.ACTION_TOKEN }}" $PR_URL | jq -r '.body')
-        ISSUE_NUMBER=$(echo $PR_BODY | grep -oE "close #[0-9]+" | tr -d 'close #')
-        if [[ ! -z "$ISSUE_NUMBER" ]]; then
-          curl -s -H "Authorization: token ${{ secrets.ACTION_TOKEN }}" -X PATCH "https://api.github.com/repos/${{ github.repository }}/issues/$ISSUE_NUMBER" -d '{"state": "closed"}'
-        fi
-      shell: bash
+    - name: Close associated issue and link PR
+      uses: actions/github-script@v6
+      with:
+        github-token: ${{secrets.GITHUB_TOKEN}}
+        script: |
+          const pr = context.payload.pull_request;
+          const prBody = pr.body;
+          
+          const issueRefs = prBody.match(/(close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved)\s+#(\d+)/gi);
+          
+          if (issueRefs) {
+            for (const ref of issueRefs) {
+              const issueNumber = ref.match(/#(\d+)/)[1];
+              
+              try {
+                // 이슈 닫기
+                await github.rest.issues.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issueNumber,
+                  state: 'closed'
+                });
+                
+                // PR에 라벨 추가
+                await github.rest.issues.addLabels({
+                  issue_number: pr.number,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  labels: [`closed-issue-${issueNumber}`]
+                });
+                
+                // 이슈에 PR 링크 추가
+                await github.rest.issues.createComment({
+                  issue_number: issueNumber,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  body: `This issue was closed by PR #${pr.number}`
+                });
+                
+                console.log(`Closed Issue #${issueNumber} and linked to PR #${pr.number}`);
+              } catch (error) {
+                console.error(`Error processing Issue #${issueNumber}: ${error}`);
+              }
+            }
+          } else {
+            console.log('No issue references found in PR description');
+          }
