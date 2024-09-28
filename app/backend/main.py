@@ -4,13 +4,13 @@ from fastapi.routing import APIRoute
 from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
-from app.backend.main import Base, engine
-from app.backend.src.main.core.config import settings
-from app.backend.src.main.api.v1.api import api_router
+from src.main.db.database import Base, engine
+from src.main.core.config import settings
+from src.main.api.v1.api import api_router
 from contextlib import asynccontextmanager
 
-from app.backend.src.main.core.exceptions import BaseCustomException, custom_exception_handler
-from app.backend.src.main.middleware.auth import auth_middleware
+from src.main.core.exceptions import BaseCustomException, custom_exception_handler
+from src.main.middleware.auth import auth_middleware
 
 def custom_generate_unique_id(route: APIRoute) -> str:
     if route.tags:

@@ -2,8 +2,8 @@ from fastapi import HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 
-from app.backend.src.main.core.config import settings
-from app.backend.src.main.domains.user.services import UserService
+from src.main.core.config import settings
+from src.main.domains.user.services import UserService
 
 
 security = HTTPBearer()

@@ -1,6 +1,5 @@
 from fastapi import APIRouter
-from app.backend.src.main.domains.user import endpoints as user_endpoints
-from app.backend.src.main.domains.chat import endpoints as chat_endpoints
+from src.main.domains.user import endpoints as user_endpoints
 # 다른 도메인의 엔드포인트들도 여기에 임포트합니다.
 
 api_router = APIRouter()

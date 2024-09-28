@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 
-from app.backend.src.main.domains.user.repositories import UserRepository
+from src.main.domains.user.repositories import UserRepository
 
 class UserService:
     def __init__(self, user_repository: UserRepository):

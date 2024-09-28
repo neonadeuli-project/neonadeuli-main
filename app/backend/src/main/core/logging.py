@@ -3,7 +3,7 @@ import sys
 from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 
-from app.backend.src.main.core.config import settings
+from src.main.core.config import settings
 
 
 def setup_logging():
