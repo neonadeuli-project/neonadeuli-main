@@ -1,11 +1,12 @@
 # 개발 및 프로덕션 환경을 위한 Dockerfile
-FROM python:3.9-slim
+FROM python:3.10-slim
 
-WORKDIR /app
+WORKDIR /app/backend
 
 # 시스템 의존성 설치
 RUN apt-get update && apt-get install -y \
     build-essential \
+    libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # 파이썬 의존성 파일 복사 및 설치
