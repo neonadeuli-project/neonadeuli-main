@@ -35,29 +35,29 @@ def create_application() -> FastAPI:
         # docs_url= None,
         # redoc_url= None,
         title = settings.PROJECT_NAME,
-        openapi_url=f"{settings.API_V1_STR}/openapi.json",
+        # openapi_url=f"{settings.API_V1_STR}/openapi.json",
         generate_unique_id_function=custom_generate_unique_id
     )
 
     app.add_exception_handler(BaseCustomException, custom_exception_handler)
 
-    app.add_middleware(SessionMiddleware, secret_key=settings.BACKEND_SESSION_SECRET_KEY)
+    # app.add_middleware(SessionMiddleware, secret_key=settings.BACKEND_SESSION_SECRET_KEY)
     app.middleware("http")(auth_middleware)
     # Base.metadata.create_all(bind=engine)
 
     # Set All CORS enabled origins
-    if settings.BACKEND_CORS_ORIGINS:
-        app.add_middleware(
-            CORSMiddleware,
-            allow_origins=[
-                str(origin).strip("/") for origin in settings.BACKEND_CORS_ORIGINS
-            ],
-            allow_credentials=True,
-            allow_methods=["*"],
-            allow_headers=["*"]
-        )
+    # if settings.BACKEND_CORS_ORIGINS:
+    #     app.add_middleware(
+    #         CORSMiddleware,
+    #         allow_origins=[
+    #             str(origin).strip("/") for origin in settings.BACKEND_CORS_ORIGINS
+    #         ],
+    #         allow_credentials=True,
+    #         allow_methods=["*"],
+    #         allow_headers=["*"]
+    #     )
 
-    app.include_router(api_router, prefix=settings.API_V1_STR)
+    # app.include_router(api_router, prefix=settings.API_V1_STR)
 
     return app
 
