@@ -1,5 +1,5 @@
 # 개발 환경
-.env
+app/backend/.env
 .env.*
 !.env.example
 
@@ -89,7 +89,7 @@ celerybeat.pid
 *.sage.py
 
 # dotenv
-.env
+app/backend/.env
 
 # virtualenv
 .venv
