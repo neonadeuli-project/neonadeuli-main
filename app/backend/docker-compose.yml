@@ -3,14 +3,14 @@ version: '3.8'
 services:
   backend:
     build:
-      context: ./backend
+      context: .
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
     environment:
       - DATABASE_URL=postgresql://user:password@db:5432/neonadeuli
     volumes:
-      - ./backend:/app
+      - .:/app/backend
     depends_on:
       - db
 
