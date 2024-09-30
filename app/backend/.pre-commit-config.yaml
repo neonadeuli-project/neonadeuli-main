@@ -17,3 +17,10 @@ repos:
     rev: 7.1.1
     hooks:
     - id: flake8
+      args: [
+        "--max-line-length=88",
+        "--extend-ignore=E203,E266,E501,W503,F403,F401,E402,E711,F405,F811,F841,W291,W293,B950,B008,B904,B907",
+        "--max-complexity=18",
+        "--select=B,C,E,F,W,T4,B9",
+        "--exclude=.git,__pycache__,docs/source/conf.py,old,build,dist"
+       ]
