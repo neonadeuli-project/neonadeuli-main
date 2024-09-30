@@ -12,10 +12,12 @@ from contextlib import asynccontextmanager
 from src.main.core.exceptions import BaseCustomException, custom_exception_handler
 from src.main.middleware.auth import auth_middleware
 
+
 def custom_generate_unique_id(route: APIRoute) -> str:
     if route.tags:
         return f"{route.tags[0]}-{route.name}"
     return route.name
+
 
 @asynccontextmanager
 async def app_lifespan(app: FastAPI):
@@ -28,15 +30,16 @@ async def app_lifespan(app: FastAPI):
     yield
     # 애플리케이션 종료 시 실행될 로직 (필요한 경우)
 
+
 def create_application() -> FastAPI:
     app = FastAPI(
-        lifespan= app_lifespan,
+        lifespan=app_lifespan,
         # 배포 시 swagger UI, Redoc 비활성화
         # docs_url= None,
         # redoc_url= None,
-        title = settings.PROJECT_NAME,
+        title=settings.PROJECT_NAME,
         # openapi_url=f"{settings.API_V1_STR}/openapi.json",
-        generate_unique_id_function=custom_generate_unique_id
+        generate_unique_id_function=custom_generate_unique_id,
     )
 
     app.add_exception_handler(BaseCustomException, custom_exception_handler)
@@ -60,5 +63,6 @@ def create_application() -> FastAPI:
     # app.include_router(api_router, prefix=settings.API_V1_STR)
 
     return app
+
 
 app = create_application()
