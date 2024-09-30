@@ -3,6 +3,9 @@ app/backend/.env
 .env.*
 !.env.example
 
+#sonarqube
+app/backend/.scannerwork
+
 # 의존성
 /node_modules
 /.pnp
