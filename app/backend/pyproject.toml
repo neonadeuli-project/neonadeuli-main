@@ -34,7 +34,7 @@ requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.black]
-line-length = 88
+line-length = 120
 target-version = ['py37', 'py38']
 include = '\.pyi?$'
 extend-exclude = '''
@@ -53,3 +53,11 @@ extend-exclude = '''
   | profiling
 )/
 '''
+
+[tool.isort]
+line_length = 120
+skip_glob = ["*/migrations/*"]
+
+[tool.mypy]
+no_namespace_packages = true
+no_strict_optional = true
