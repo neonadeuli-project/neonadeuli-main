@@ -37,12 +37,15 @@ jobs:
 
     # 코드 포맷팅 Pre-commit 실행
     - name: Run pre-commit
-      run: pre-commit run --files app/backend/**/*.py
+      run: |
+        cd app/backend
+        pre-commit run --files **/*.py
 
       # 변경사항 확인
     - name: Check for changes
       id: git-check
       run: |
+        cd app/backend
         git diff --exit-code || echo "changes=true" >> $GITHUB_OUTPUT
 
       # 변경사항 커밋 & 푸시
@@ -51,7 +54,7 @@ jobs:
       run: |
         git config --local user.email "github-actions[bot]@users.noreply.github.com"
         git config --local user.name "github-actions[bot]"
-        git add .
+        git add app/backend
         git commit -m "Apply automatic formatting changes"
         git push https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:${{ github.head_ref }}
 
