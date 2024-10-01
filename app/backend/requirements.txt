@@ -20,3 +20,8 @@ black
 itsdangerous
 pydantic-settings
 pre-commit
+flake8-bugbear
+flake8-comprehensions
+flake8-pytest-style
+isort
+mypy
