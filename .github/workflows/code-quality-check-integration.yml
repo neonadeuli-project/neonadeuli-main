@@ -1,0 +1,81 @@
+name: Backend Code Quality CI
+
+on:
+  push:
+    branches: [ develop, release ]
+    paths:
+      - 'app/backend/**'
+  pull_request:
+    paths:
+      - 'app/backend/**'
+
+jobs:
+  lint-and-test:
+    # Ubuntu 최신 환경에서 실행
+    runs-on: ubuntu-latest
+
+    steps:
+    # Github Repository 체크아웃
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # python 환경 설정
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
+
+    # python 버전 표시
+    - name : Display Python version
+      run : python --version
+
+    # Python 패키지 설치
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r app/backend/requirements.txt
+
+    # 코드 포맷팅 Pre-commit 실행
+    - name: Run pre-commit
+      run: |
+        cd app/backend
+        pre-commit run --files **/*.py
+
+      # 변경사항 확인
+    - name: Check for changes
+      id: git-check
+      run: |
+        cd app/backend
+        git diff --exit-code || echo "changes=true" >> $GITHUB_OUTPUT
+
+      # 변경사항 커밋 & 푸시
+    - name: Commit and push changes
+      if: steps.git-check.outputs.changes == 'true' && github.event_name == 'pull_request'
+      run: |
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        git add app/backend
+        git commit -m "Apply automatic formatting changes"
+        git push https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:${{ github.head_ref }}
+
+
+      # PR에 코멘트 추가
+    - name: Comment PR
+      if: steps.git-check.outputs.changes == 'true' && github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        github-token: ${{secrets.GITHUB_TOKEN}}
+        script: |
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.name,
+            body: '✨ Code has been automatically formatted. Please review the changes.'
+          })
+
+      # 남은 문제 확인
+    - name: Check for remaining issues
+      if: failure()
+      run: |
+        echo "There are still some issues that couldn't be automatically fixed. Please address them manually."
+        exit 1

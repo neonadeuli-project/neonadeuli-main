@@ -1,7 +1,10 @@
 # 개발 환경
-.env
+app/backend/.env
 .env.*
 !.env.example
+
+#sonarqube
+app/backend/.scannerwork
 
 # 의존성
 /node_modules
@@ -89,7 +92,7 @@ celerybeat.pid
 *.sage.py
 
 # dotenv
-.env
+app/backend/.env
 
 # virtualenv
 .venv
