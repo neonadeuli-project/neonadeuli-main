@@ -1,6 +1,6 @@
 [flake8]
 show-source = true
-extend-ignore = E203, E266, E501, W503, F403, F401, E402, E711, F405, F811, F841, W291, W293, B008, B907, B904, B950
+extend-ignore = E203, E266, E501, W503
 exclude =
     # No need to traverse our git directory
     .git,
@@ -13,10 +13,20 @@ exclude =
     # This contains our built documentation
     build,
     # This contains builds of flake8 that we don't want to check
-    dist
-max-complexity = 18
-max-line-length = 88
-select = B,C,E,F,W,T4,B9
+    dist,
+    .gitignore,
+    */migrations/*
+max-complexity = 10
+max-line-length = 120
+select = B,C,E,F,W,T4,B9,PT
+# B : bugbear
+# C : comprehensions
+# PT : pytest style
+#bugbear, comprehensions
+extend-select = B950, C4
+#pytest style
+pytest-fixture-no-parentheses = True
+pytest-mark-no-parentheses = True
 per-file-ignores =
     __init__.py:F401
     app/utils/prompts.py:W291,W293
