@@ -4,6 +4,10 @@ on:
   pull_request:
       types: [opened, synchronize]
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   code-review:
     runs-on: self-hosted
@@ -22,7 +26,7 @@ jobs:
 
       - name: Run AI Code Review
         env:
-          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           echo "Starting AI Code Review"
           export PYTHONPATH=$PYTHONPATH:${{ github.workspace }}
