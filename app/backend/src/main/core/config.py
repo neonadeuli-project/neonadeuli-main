@@ -1,8 +1,7 @@
 from typing import Annotated, Any
 from dotenv import load_dotenv
 
-# load .env file
-load_dotenv()
+load_dotenv('app/backend/.env')
 
 from pydantic import (
     PostgresDsn,
