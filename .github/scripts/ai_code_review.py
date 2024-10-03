@@ -5,7 +5,10 @@ from scripts.review_prompt import review_prompt
 
 def get_pr_files(repo, pr_number, token):
     url = f"https://api.github.com/repos/{repo}/pulls/{pr_number}/files"
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json"
+    }
     response = requests.get(url, headers=headers)
     if response.status_code == 200:
         return response.json()
