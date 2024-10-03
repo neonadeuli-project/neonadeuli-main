@@ -7,7 +7,8 @@ def get_pr_files(repo, pr_number, token):
     url = f"https://api.github.com/repos/{repo}/pulls/{pr_number}/files"
     headers = {
         "Authorization": f"Bearer {token}",
-        "Accept": "application/vnd.github+json"
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28"
     }
     response = requests.get(url, headers=headers)
     if response.status_code == 200:
@@ -42,7 +43,8 @@ def post_review_comment(repo, pr_number, commit_id, path, position, body, token)
     url = f"https://api.github.com/repos/{repo}/pulls/{pr_number}/comments"
     headers = {
         "Authorization": f"Bearer {token}",
-        "Accept": "application/vnd.github+json"
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28"
     }
     data = {
         "body": body,
@@ -53,6 +55,10 @@ def post_review_comment(repo, pr_number, commit_id, path, position, body, token)
     response = requests.post(url, headers=headers, json=data)
     if response.status_code != 201:
         print(f"Error posting comment: {response.status_code}, {response.text}")
+        print(f"Response content: {response.content}")
+        print(f"Request URL: {url}")
+        print(f"Request headers: {headers}")
+        print(f"Request data: {data}")
 
 def main():
     github_token = os.environ['GITHUB_TOKEN']
