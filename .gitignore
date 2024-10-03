@@ -184,3 +184,9 @@ coverage/
 
 # ESLint
 .eslintcache
+
+# actions-runner
+actions-runner
+
+# k8s
+k8s
