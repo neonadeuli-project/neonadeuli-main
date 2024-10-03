@@ -4,16 +4,20 @@ on:
     pull_request:
         types: [opened, synchronize]
 
-jobs:
-    review:
-        runs-on: self-hosted
-        steps:
-            - uses: actions/checkout@v2
+permissions: write-all
 
-            - name: Set up Python
-              uses: actions/setup-python@v2
+jobs:
+    code-review:
+        runs-on: self-hosted
+        permissions:           
+          contents: write     
+          pull-requests: write  
+
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-python@v5
               with:
-                python-version: '3.11'
+                python-version: '3.x'
 
             - name: Install dependencies
               run: |
