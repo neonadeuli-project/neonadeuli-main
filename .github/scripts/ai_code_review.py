@@ -22,7 +22,7 @@ def review_code(file_content):
     try:
         response = requests.post('http://localhost:11434/api/generate', 
                                 json={
-                                    "model": "llama3:7b",
+                                    "model": "llama3.2",
                                     "prompt": prompt,
                                     "stream": False,
                                     "options": {
