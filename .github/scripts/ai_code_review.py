@@ -75,6 +75,9 @@ def post_review_comment(repo, pr_number, commit_id, path, position, body, token)
     except requests.RequestException as e:
         logger.error(f"리뷰 코멘트 게시 중 오류 발생: {str(e)}")
         logger.error(f"응답 내용: {response.content if 'response' in locals() else '응답 없음'}")
+        logger.error(f"응답 상태 코드: {e.response.status_code}")
+        logger.error(f"응답 헤더: {e.response.headers}")
+        logger.error(f"응답 내용: {e.response.text}")
 
 def main():
     try:

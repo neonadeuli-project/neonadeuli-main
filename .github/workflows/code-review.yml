@@ -12,7 +12,7 @@ jobs:
   code-review:
     runs-on: self-hosted
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v2
@@ -24,9 +24,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install requests
 
+      - name: Check Ollama availability
+        run: |
+          curl http://localhost:11434/api/tags
+
       - name: Run AI Code Review
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.AI_REVIEW_PAT }}
         run: |
           echo "Starting AI Code Review"
           export PYTHONPATH=$PYTHONPATH:${{ github.workspace }}
