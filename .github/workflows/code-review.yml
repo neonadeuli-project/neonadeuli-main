@@ -15,11 +15,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: '3.12'
-
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -29,11 +24,16 @@ jobs:
         run: |
           curl http://localhost:11434/api/tags
 
+      - name: Check Python version
+        run: |
+          python3 --version
+          which python3
+
       - name: Run AI Code Review
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "Starting AI Code Review"
           export PYTHONPATH=$PYTHONPATH:${{ github.workspace }}
-          python .github/scripts/ai_code_review.py
+          /usr/local/bin/python3 /Users/jonghyunjung/VisualStudioProjects/neonadeuli-main/.github/scripts/ai_code_review.py
           echo "AI Code Review completed"
