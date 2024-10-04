@@ -25,6 +25,19 @@ def get_pr_files(repo, pr_number, token):
     except requests.RequestException as e:
         logger.error(f"PR 파일 가져오기 오류: {str(e)}")
         return None
+    
+def get_latest_commit_id(repo, pr_number, token):
+    url = f"https://api.github.com/repos/{repo}/pulls/{pr_number}"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28"
+    }
+
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
+    pr_data = response.json()
+    return pr_data['head']['sha']
 
 def review_code(file_content):
     prompt = review_prompt.format(code=file_content)
@@ -51,7 +64,7 @@ def review_code(file_content):
         logger.error(f"코드 리뷰 중 오류 발생: {str(e)}")
         return f"코드 리뷰 중 발생한 에러: {str(e)}"
     
-def post_review_comment(repo, pr_number, commit_id, path, position, body, token):
+def post_review_comment(repo, pr_number, commit_sha, path, position, body, token):
     url = f"https://api.github.com/repos/{repo}/pulls/{pr_number}/comments"
     headers = {
         "Authorization": f"Bearer {token}",
@@ -60,7 +73,7 @@ def post_review_comment(repo, pr_number, commit_id, path, position, body, token)
     }
     data = {
         "body": body,
-        "commit_id": commit_id,
+        "commit_id": commit_sha,
         "path": path,
         "position": position 
     }
@@ -95,6 +108,7 @@ def main():
         logger.info(f"PR 번호 리뷰 중: {pr_number}")
         
         pr_files = get_pr_files(repo, pr_number, github_token)
+        latest_commit_id = get_latest_commit_id(repo, pr_number, github_token)
 
         if pr_files:
             for file in pr_files:
@@ -106,7 +120,7 @@ def main():
                     post_review_comment(
                         repo,
                         pr_number,
-                        file['sha'],  
+                        latest_commit_id, 
                         file['filename'],  
                         file['changes'],  
                         f"AI Code Review:\n\n{review}",  
