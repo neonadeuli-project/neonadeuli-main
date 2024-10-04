@@ -15,10 +15,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'
+
       - name: Install dependencies
         run: |
-          python3 -m pip install --upgrade pip
-          pip3 install requests
+          python -m pip install --upgrade pip
+          pip install requests
 
       - name: Check Ollama availability
         run: |
