@@ -26,7 +26,7 @@ jobs:
 
       - name: Run AI Code Review
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "Starting AI Code Review"
           export PYTHONPATH=$PYTHONPATH:${{ github.workspace }}
