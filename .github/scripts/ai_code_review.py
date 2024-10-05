@@ -101,6 +101,23 @@ def summarize_reviews(all_reviews):
     summary = review_code(summary_prompt)
     return summary
 
+def post_pr_comment(repo, pr_number, body, token):
+    url = f"https://api.github.com/repos/{repo}/issues/{pr_number}/comments"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28"
+    }
+    data = {"body": body}
+    
+    try:
+        response = requests.post(url, headers=headers, json=data)
+        response.raise_for_status()
+        logger.info("PR 코멘트가 성공적으로 게시되었습니다.")
+    except requests.RequestException as e:
+        logger.error(f"PR 코멘트 게시 중 오류 발생: {str(e)}")
+        logger.error(f"응답 내용: {response.content if 'response' in locals() else '응답 없음'}")
+
 def main():
     try:
         github_token = os.environ['GITHUB_TOKEN']
@@ -117,7 +134,7 @@ def main():
         logger.info(f"PR 번호 리뷰 중: {pr_number}")
         
         pr_files = get_pr_files(repo, pr_number, github_token)
-        latest_commit_id = get_latest_commit_id(repo, pr_number, github_token)
+        # latest_commit_id = get_latest_commit_id(repo, pr_number, github_token)
 
         all_reviews = []
 
@@ -131,15 +148,23 @@ def main():
 
             combined_review = summarize_reviews(all_reviews)
             
-            post_review_comment(
-                    repo,
-                    pr_number,
-                    latest_commit_id, 
-                    None,  
-                    None,  
-                    f"AI Code Review 요약:\n\n{combined_review}",  
-                    github_token
+            # post_review_comment(
+            #     repo,
+            #     pr_number,
+            #     latest_commit_id, 
+            #     file['filename'],  
+            #     file['changes'],  
+            #     f"AI Code Review:\n\n{review}",  
+            #     github_token
+            # )
+
+            post_pr_comment(
+                repo,
+                pr_number,
+                f"AI Code Review 요약:\n\n{combined_review}",
+                github_token
             )
+
         else:
                 logger.warning("파일을 찾을 수 없거나 PR 파일을 가져오는 데 실패했습니다.")
 
