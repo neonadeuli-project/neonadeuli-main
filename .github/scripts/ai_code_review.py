@@ -43,7 +43,7 @@ def review_code(pr_content):
     prompt = review_prompt.format(code=pr_content)
     url = 'http://localhost:11434/api/generate'
     data = {
-        "model": "codellama",
+        "model": "llama3.1",
         "prompt": prompt,
         "stream": False,
         "options": {
