@@ -47,14 +47,10 @@ def review_code(pr_content):
         "prompt": prompt,
         "stream": False,
         "options": {
-            "temperature": 0.5,
-            "top_p": 0.9,
+            "temperature": 0.7,
+            "top_p": 0.8,
             "top_k": 40,
-            "num_predict": 1024,
-            "repeat_penalty": 1.1,
-            "presence_penalty": 0.1,
-            "frequency_penalty": 0.1,
-            "stop": ["\n\n", "END OF REVIEW"]
+            "num_predict": 1024
         }
     }
     logger.debug(f"코드 리뷰 중. URL: {url}")
