@@ -3,7 +3,7 @@ import os
 import requests
 import re
 import logging
-from scripts.review_prompt import review_prompt
+from scripts.review_prompt import generate_review_prompt
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -244,7 +244,7 @@ def main():
                         important_files_content[file['filename']] = content
 
             # 전체 코드에 대한 리뷰 및 중요 파일에 대한 상세 리뷰 요청
-            review_result = review_code(review_prompt)
+            review_result = generate_review_prompt(all_code, important_files_content)
 
             # 리뷰 결과 파싱 및 처리
             parsed_result = parse_review_result(review_result)
