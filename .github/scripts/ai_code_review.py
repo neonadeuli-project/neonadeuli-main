@@ -41,7 +41,7 @@ def get_latest_commit_id(repo, pr_number, token):
     return pr_data['head']['sha']
 
 def review_code(pr_content):
-    prompt = review_prompt.format(code=pr_content)
+    prompt = review_prompt.format(all_code=pr_content)
     url = 'http://localhost:11434/api/generate'
     data = {
         "model": "llama3.1",
@@ -216,28 +216,25 @@ def generate_reviews(pr_files, repo, pr_number, latest_commit_id, github_token):
     # 중요 파일에 대한 상세 리뷰
     detailed_reviews = []
     for file in important_files:
-        try:
-            content = requests.get(file['raw_url']).text
-            review = review_code(content)
-            detailed_reviews.append(f"File: {file['filename']}\n{review}\n\n")
+        content = requests.get(file['raw_url']).text
+        review = review_code(content)
+        detailed_reviews.append(f"File: {file['filename']}\n{review}\n\n")
 
-            line_comments_prompt = (
-                f"다음 {file['filename']} 파일의 코드를 리뷰하고, 중요한 라인에 대해 구체적인 코멘트를 제공해주세요. "
-                f"형식은 '라인 번호: 코멘트'로 해주세요.\n\n{content}"
-            )
-            line_comments = review_code(line_comments_prompt)
-            post_line_comments(
-                repo,
-                pr_number,
-                latest_commit_id,
-                file['filename'],
-                file['patch'],
-                line_comments,
-                github_token
-            )
-        except requests.RequestException as e:
-            logger.error(f"중요 파일 내용을 가져오는 중 오류 발생: {str(e)}")
-            continue
+        line_comments_prompt = (
+            f"다음 {file['filename']} 파일의 코드를 리뷰하고, 중요한 라인에 대해 구체적인 코멘트를 제공해주세요. "
+            f"형식은 '라인 번호: 코멘트'로 해주세요.\n\n{content}"
+        )
+        line_comments = review_code(line_comments_prompt)
+
+        post_line_comments(
+            repo,
+            pr_number,
+            latest_commit_id,
+            file['filename'],
+            file['patch'],
+            line_comments,
+            github_token
+        )
     
     return overall_review, detailed_reviews
 
