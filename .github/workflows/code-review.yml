@@ -38,6 +38,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: |
+          export PYTHONPATH=$PYTHONPATH:${{ github.workspace }}
           python .github/scripts/ai_code_review.py
 
       # - name: Check Ollama availability
