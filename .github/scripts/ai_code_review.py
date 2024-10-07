@@ -5,7 +5,12 @@ import re
 import groq
 import logging
 
-from scripts.review_prompt import review_prompt
+from scripts.review_prompt import (
+    get_review_prompt,
+    get_file_review_prompt,
+    get_line_comments_prompt,
+    get_total_comments_prompt
+)
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -45,7 +50,7 @@ def get_latest_commit_id(repo, pr_number, token):
     return pr_data['head']['sha']
 
 def review_code_groq(pr_content):
-    prompt = review_prompt.format(all_code=pr_content)
+    prompt = get_review_prompt(pr_content)
     try:
         response = groq_client.chat.completions.create(
             model="llama-3.1-70b-versatile",  
@@ -62,7 +67,7 @@ def review_code_groq(pr_content):
         return f"코드 리뷰 중 발생한 에러: {str(e)}"
 
 def review_code_ollama(pr_content):
-    prompt = review_prompt.format(all_code=pr_content)
+    prompt = get_review_prompt(pr_content)
     url = 'http://localhost:11434/api/generate'
     data = {
         "model": "llama3.1",
@@ -218,9 +223,14 @@ def fetch_pr_data(repo, pr_number, github_token):
     latest_commit_id = get_latest_commit_id(repo, pr_number, github_token)
     return pr_files, latest_commit_id
 
+def is_important_file(file):
+    total_lines = file.get('additions', 0) + file.get('deletions', 0)
+    change_ratio = total_lines / file.get('changes', 1)
+    return file['changes'] > 50 or change_ratio > 0.3
+
 def generate_reviews(pr_files, repo, pr_number, latest_commit_id, github_token):
     all_code = ""
-    important_files = [f for f in pr_files if f['changes'] > 50]
+    important_files = [f for f in pr_files if is_important_file(f)]
     for file in pr_files:
         if file['status'] != 'removed':
             logger.info(f"파일 리뷰 중: {file['filename']}")
@@ -232,19 +242,27 @@ def generate_reviews(pr_files, repo, pr_number, latest_commit_id, github_token):
         return None, []
     
     # 전체 코드에 대한 간략한 리뷰
-    overall_review = summarize_reviews(all_code)
+    review_prompt = get_review_prompt(all_code)
+    overall_review = review_code_groq(review_prompt)
 
     # 중요 파일에 대한 상세 리뷰
-    detailed_reviews = []
     for file in important_files:
         content = requests.get(file['raw_url']).text
-        review = review_code_groq(content)
-        detailed_reviews.append(f"File: {file['filename']}\n{review}\n\n")
-
-        line_comments_prompt = (
-            f"다음 {file['filename']} 파일의 코드를 리뷰하고, 중요한 라인에 대해 구체적인 코멘트를 제공해주세요. "
-            f"형식은 '라인 번호: 코멘트'로 해주세요.\n\n{content}"
+        file_review_prompt = get_file_review_prompt(file['filename'], content)
+        file_review = review_code_groq(file_review_prompt)
+        
+        # 파일 전체에 대한 리뷰 코멘트
+        post_file_comment(
+            repo,
+            pr_number,
+            latest_commit_id,
+            file['filename'],
+            file_review,
+            github_token
         )
+
+        # 라인 별 코멘트
+        line_comments_prompt = get_line_comments_prompt(file['filename'], content)
         line_comments = review_code_groq(line_comments_prompt)
 
         post_line_comments(
@@ -257,10 +275,29 @@ def generate_reviews(pr_files, repo, pr_number, latest_commit_id, github_token):
             github_token
         )
     
-    return overall_review, detailed_reviews
+    return overall_review
 
-def create_review_summary(overall_review, detailed_reviews):
-    return f"Overall Review:\n{overall_review}\n\nDetailed Reviews:\n{''.join(detailed_reviews)}"
+def post_file_comment(repo, pr_number, commit_sha, file_path, body, token):
+    url = f"https://api.github.com/repos/{repo}/pulls/{pr_number}/comments"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28"
+    }
+    data = {
+        "body": body,
+        "commit_id": commit_sha,
+        "path": file_path,
+        "position": 1
+    }
+
+    try:
+        response = requests.post(url, headers=headers, json=data)
+        response.raise_for_status()
+        logger.info("PR 파일 코멘트가 성공적으로 게시되었습니다.")
+    except requests.RequestException as e:
+        logger.error(f"PR 코멘트 게시 중 오류 발생: {str(e)}")
+        logger.error(f"응답 내용: {response.content if 'response' in locals() else '응답 없음'}")
 
 def main():
     try:
@@ -282,7 +319,7 @@ def main():
         if not pr_files:
             return
         
-        overall_review, detailed_reviews = generate_reviews(
+        overall_review = generate_reviews(
             pr_files, 
             repo, 
             pr_number, 
@@ -290,14 +327,14 @@ def main():
             github_token
         )
 
-        final_summary = create_review_summary(overall_review, detailed_reviews)
-
-        post_pr_comment(
-            repo,
-            pr_number,
-            final_summary,
-            github_token
-        )
+        if overall_review:
+            comment = get_total_comments_prompt(overall_review)
+            post_pr_comment(
+                repo,
+                pr_number,
+                comment,
+                github_token
+            )
 
     except KeyError as e:
         logger.error(f"환경 변수가 설정되지 않음: {str(e)}")
