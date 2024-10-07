@@ -10,33 +10,50 @@ permissions:
 
 jobs:
   code-review:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
+    # runs-on: self-hosted
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set Python Path
-        run: echo "PYTHON_PATH=$(which python3)" >> $GITHUB_ENV
+      # - name: Set Python Path
+      #   run: echo "PYTHON_PATH=$(which python3)" >> $GITHUB_ENV
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      # - name: Install dependencies
+      #   run: |
+      #     ${{ env.PYTHON_PATH }} -m pip install --upgrade pip
+      #     ${{ env.PYTHON_PATH }} -m pip install requests
 
       - name: Install dependencies
         run: |
-          ${{ env.PYTHON_PATH }} -m pip install --upgrade pip
-          ${{ env.PYTHON_PATH }} -m pip install requests
-
-      - name: Check Ollama availability
-        run: |
-          curl http://localhost:11434/api/tags
-
-      - name: Check Python version
-        run: |
-          python3 --version
-          which python3
+          python -m pip install --upgrade pip
+          pip install requests groq
 
       - name: Run AI Code Review
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: |
-          echo "Starting AI Code Review"
-          export PYTHONPATH=$PYTHONPATH:${{ github.workspace }}
-          /usr/local/bin/python3 /Users/jonghyunjung/VisualStudioProjects/neonadeuli-main/.github/scripts/ai_code_review.py
-          echo "AI Code Review completed"
+          python .github/scripts/ai_code_review.py
+
+      # - name: Check Ollama availability
+      #   run: |
+      #     curl http://localhost:11434/api/tags
+
+      # - name: Check Python version
+      #   run: |
+      #     python3 --version
+      #     which python3
+
+      # - name: Run AI Code Review
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   run: |
+      #     echo "Starting AI Code Review"
+      #     export PYTHONPATH=$PYTHONPATH:${{ github.workspace }}
+      #     /usr/local/bin/python3 /Users/jonghyunjung/VisualStudioProjects/neonadeuli-main/.github/scripts/ai_code_review.py
+      #     echo "AI Code Review completed"

@@ -25,3 +25,4 @@ flake8-comprehensions
 flake8-pytest-style
 isort
 mypy
+groq

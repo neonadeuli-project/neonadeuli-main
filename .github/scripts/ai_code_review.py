@@ -2,11 +2,18 @@ import json
 import os
 import requests
 import re
+import groq
 import logging
+
+from dotenv import load_dotenv
 from scripts.review_prompt import review_prompt
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
+
+load_dotenv('app/backend/.env')
+
+groq_client = groq.Groq(api_key=os.environ["GROQ_API_KEY"])
 
 def get_pr_files(repo, pr_number, token):
     url = f"https://api.github.com/repos/{repo}/pulls/{pr_number}/files"
@@ -40,7 +47,24 @@ def get_latest_commit_id(repo, pr_number, token):
     pr_data = response.json()
     return pr_data['head']['sha']
 
-def review_code(pr_content):
+def review_code_groq(pr_content):
+    prompt = review_prompt.format(all_code=pr_content)
+    try:
+        response = groq_client.chat.completions.create(
+            model="llama-3.1-70b-versatile",  
+            messages=[
+                {"role": "system", "content": "You are an expert code reviewer."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7,
+            max_tokens=1024
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        logger.error(f"Groq API 호출 중 오류 발생: {str(e)}")
+        return f"코드 리뷰 중 발생한 에러: {str(e)}"
+
+def review_code_ollama(pr_content):
     prompt = review_prompt.format(all_code=pr_content)
     url = 'http://localhost:11434/api/generate'
     data = {
@@ -95,7 +119,7 @@ def post_review_comment(repo, pr_number, commit_sha, path, position, body, token
 
 def summarize_reviews(all_reviews):
     summary_prompt = f"다음은 전체적인 코드 리뷰 결과입니다 : \n\n{''.join(all_reviews)}"
-    summary = review_code(summary_prompt)
+    summary = review_code_groq(summary_prompt)
     return summary
 
 def post_pr_comment(repo, pr_number, body, token):
@@ -217,14 +241,14 @@ def generate_reviews(pr_files, repo, pr_number, latest_commit_id, github_token):
     detailed_reviews = []
     for file in important_files:
         content = requests.get(file['raw_url']).text
-        review = review_code(content)
+        review = review_code_groq(content)
         detailed_reviews.append(f"File: {file['filename']}\n{review}\n\n")
 
         line_comments_prompt = (
             f"다음 {file['filename']} 파일의 코드를 리뷰하고, 중요한 라인에 대해 구체적인 코멘트를 제공해주세요. "
             f"형식은 '라인 번호: 코멘트'로 해주세요.\n\n{content}"
         )
-        line_comments = review_code(line_comments_prompt)
+        line_comments = review_code_groq(line_comments_prompt)
 
         post_line_comments(
             repo,
