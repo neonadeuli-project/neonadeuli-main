@@ -3,7 +3,7 @@ import os
 import requests
 import re
 import logging
-from scripts.review_prompt import review_prompt
+from scripts.review_prompt import generate_review_prompt
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -179,6 +179,48 @@ def post_line_comments(repo, pr_number, commit_sha, filename, patch, line_commen
 
     logger.info("모든 라인 코멘트 처리 완료")
 
+def parse_and_post_review(repo, pr_number, commit_sha, review_result, token):
+    lines = review_result.split('\n')
+    overall_review = ""
+    current_file = ""
+    file_review = ""
+    line_comments = {}
+
+    for line in lines:
+        if line.startswith("1. 전체 리뷰:"):
+            overall_review = line[len("1. 전체 리뷰:"):].strip()
+        elif line.startswith("2. 중요 파일 상세 리뷰:"):
+            continue
+        elif line.startswith("   ") and ": " in line:
+            filename, _ = line.strip().split(": ", 1)
+            current_file = filename
+            file_review = ""
+            line_comments[current_file] = {}
+        elif line.startswith("   - 전반적인 리뷰:"):
+            file_review = line[len("   - 전반적인 리뷰:"):].strip()
+        elif line.startswith("   - 라인별 코멘트:"):
+            continue
+        elif line.startswith("     ") and ": " in line:
+            line_num, comment = line.strip().split(": ", 1)
+            line_comments[current_file][int(line_num)] = comment
+
+    # 전체 리뷰 게시
+    post_pr_comment(repo, pr_number, f"전체 리뷰:\n{overall_review}", token)
+
+    # 파일별 리뷰 및 라인 코멘트 게시
+    for file, comments in line_comments.items():
+        file_content = f"파일: {file}\n\n전반적인 리뷰:\n{file_review}\n\n라인별 코멘트:"
+        for line_num, comment in comments.items():
+            file_content += f"\n{line_num}: {comment}"
+        
+        post_review_comment(repo, pr_number, commit_sha, file, 1, file_content, token)
+
+        # 개별 라인 코멘트 게시
+        for line_num, comment in comments.items():
+            post_review_comment(repo, pr_number, commit_sha, file, line_num, comment, token)
+
+    logger.info("모든 리뷰 코멘트가 성공적으로 게시되었습니다.")
+
 def main():
     try:
         github_token = os.environ['GITHUB_TOKEN']
@@ -198,6 +240,7 @@ def main():
         latest_commit_id = get_latest_commit_id(repo, pr_number, github_token)
 
         all_code = ""
+        important_files_content = {}
 
         if pr_files:
             important_files = [f for f in pr_files if f['changes'] > 50]
@@ -207,39 +250,47 @@ def main():
                     logger.info(f"파일 리뷰 중: {file['filename']}")
                     content = requests.get(file['raw_url']).text
                     all_code += f"File: {file['filename']}\n{content}\n\n"
+                    if file in important_files:
+                        important_files_content[file['filename']] = content
 
-            # 전체 코드에 대한 간략한 리뷰
-            overall_review = summarize_reviews(all_code)
+            # 새로운 리뷰 프롬프트 생성
+            review_prompt = generate_review_prompt(all_code, important_files_content)
 
-            # 중요 파일에 대한 상세 리뷰
-            detailed_reviews = []
-            for file in important_files:
-                content = requests.get(file['raw_url']).text
-                review = review_code(content)
-                detailed_reviews.append(f"File: {file['filename']}\n{review}\n\n")
+            # 전체 코드에 대한 리뷰
+            overall_review = review_code(review_prompt)
 
-                line_comments_prompt = f"다음 {file['filename']} 파일의 코드를 리뷰하고, 중요한 라인에 대해 구체적인 코멘트를 제공해주세요. 형식은 '라인 번호: 코멘트'로 해주세요.\n\n{content}"
-                line_comments = review_code(line_comments_prompt)
+            # 리뷰 결과 파싱 및 코멘트 게시
+            parse_and_post_review(repo, pr_number, latest_commit_id, overall_review, github_token)
 
-                post_line_comments(
-                    repo, 
-                    pr_number, 
-                    latest_commit_id, 
-                    file['filename'], 
-                    file['patch'], 
-                    line_comments, 
-                    github_token
-                )
+            # # 중요 파일에 대한 상세 리뷰
+            # detailed_reviews = []
+            # for file in important_files:
+            #     content = requests.get(file['raw_url']).text
+            #     review = review_code(content)
+            #     detailed_reviews.append(f"File: {file['filename']}\n{review}\n\n")
+
+            #     line_comments_prompt = f"다음 {file['filename']} 파일의 코드를 리뷰하고, 중요한 라인에 대해 구체적인 코멘트를 제공해주세요. 형식은 '라인 번호: 코멘트'로 해주세요.\n\n{content}"
+            #     line_comments = review_code(line_comments_prompt)
+
+            #     post_line_comments(
+            #         repo, 
+            #         pr_number, 
+            #         latest_commit_id, 
+            #         file['filename'], 
+            #         file['patch'], 
+            #         line_comments, 
+            #         github_token
+            #     )
 
             # 전체 요약 생성
-            final_summary = f"Overall Review:\n{overall_review}\n\nDetailed Reviews:\n{''.join(detailed_reviews)}"
+            # final_summary = f"Overall Review:\n{overall_review}\n\nDetailed Reviews:\n{''.join(detailed_reviews)}"
 
-            post_pr_comment(
-                repo,
-                pr_number,
-                final_summary,
-                github_token
-            )
+            # post_pr_comment(
+            #     repo,
+            #     pr_number,
+            #     final_summary,
+            #     github_token
+            # )
 
         else:
             logger.warning("파일을 찾을 수 없거나 PR 파일을 가져오는 데 실패했습니다.")
