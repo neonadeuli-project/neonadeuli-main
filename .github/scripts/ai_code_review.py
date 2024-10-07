@@ -40,12 +40,12 @@ def get_latest_commit_id(repo, pr_number, token):
     pr_data = response.json()
     return pr_data['head']['sha']
 
-def review_code(pr_content):
-    prompt = review_prompt.format(code=pr_content)
+def review_code(review_prompt):
+    # prompt = review_prompt.format(code=pr_content)
     url = 'http://localhost:11434/api/generate'
     data = {
         "model": "llama3.1",
-        "prompt": prompt,
+        "prompt": review_prompt,
         "stream": False,
         "options": {
             "temperature": 0.7,
