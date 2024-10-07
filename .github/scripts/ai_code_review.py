@@ -179,6 +179,38 @@ def post_line_comments(repo, pr_number, commit_sha, filename, patch, line_commen
 
     logger.info("모든 라인 코멘트 처리 완료")
 
+def parse_review_result(review_result):
+    result = {
+        'overall_review': '',
+        'file_reviews': {}
+    }
+
+    # 전체 리뷰 추출
+    overall_match = re.search(r'1\. 전체 리뷰:(.*?)2\. 중요 파일 상세 리뷰:', review_result, re.DOTALL)
+    if overall_match:
+        result['overall_review'] = overall_match.group(1).strip()
+
+    # 파일별 리뷰 추출
+    file_reviews = re.findall(r'\[([^\]]+)\]:\n(.*?)(?=\n\[|$)', review_result, re.DOTALL)
+    
+    for filename, review_content in file_reviews:
+        result['file_reviews'][filename] = {
+            'overall_review': '',
+            'line_comments': {}
+        }
+
+        # 파일별 전반적인 리뷰 추출
+        file_overall_match = re.search(r'- 전반적인 리뷰:(.*?)- 라인별 코멘트:', review_content, re.DOTALL)
+        if file_overall_match:
+            result['file_reviews'][filename]['overall_review'] = file_overall_match.group(1).strip()
+
+        # 라인별 코멘트 추출
+        line_comments = re.findall(r'(\d+):\s*(.+?)(?=\n\d+:|\n\[|$)', review_content, re.DOTALL)
+        for line_num, comment in line_comments:
+            result['file_reviews'][filename]['line_comments'][int(line_num)] = comment.strip()
+
+    return result
+
 def main():
     try:
         github_token = os.environ['GITHUB_TOKEN']
@@ -198,59 +230,40 @@ def main():
         latest_commit_id = get_latest_commit_id(repo, pr_number, github_token)
 
         all_code = ""
+        important_files_content = {}
 
         if pr_files:
-            important_files = [f for f in pr_files if f['changes'] > 50 or f['filename'].endswith('.py')]
+            important_files = [f for f in pr_files if f['changes'] > 50]
 
             for file in pr_files:
                 if file['status'] != 'removed':  
                     logger.info(f"파일 리뷰 중: {file['filename']}")
                     content = requests.get(file['raw_url']).text
                     all_code += f"File: {file['filename']}\n{content}\n\n"
+                    if file in important_files:
+                        important_files_content[file['filename']] = content
 
-            # 전체 코드에 대한 간략한 리뷰
-            overall_review = summarize_reviews(all_code)
+            # 전체 코드에 대한 리뷰 및 중요 파일에 대한 상세 리뷰 요청
+            review_result = review_code(review_prompt)
+
+            # 리뷰 결과 파싱 및 처리
+            parsed_result = parse_review_result(review_result)
+            
+            # 전체 PR에 대한 코멘트 게시
+            post_pr_comment(repo, pr_number, parsed_result['overall_review'], github_token)
 
             # 중요 파일에 대한 상세 리뷰
-            detailed_reviews = []
-            for file in important_files:
-                content = requests.get(file['raw_url']).text
-                review = review_code(content)
-                detailed_reviews.append(f"File: {file['filename']}\n{review}\n\n")
-
-                line_comments_prompt = f"다음 {file['filename']} 파일의 코드를 리뷰하고, 중요한 라인에 대해 구체적인 코멘트를 제공해주세요. 형식은 '라인 번호: 코멘트'로 해주세요.\n\n{content}"
-                line_comments = review_code(line_comments_prompt)
-
+            for filename, file_review in parsed_result['file_reviews'].items():
+                file_info = next(f for f in important_files if f['filename'] == filename)
                 post_line_comments(
-                    repo, 
-                    pr_number, 
-                    latest_commit_id, 
-                    file['filename'], 
-                    file['patch'], 
-                    review, 
+                    repo,
+                    pr_number,
+                    latest_commit_id,
+                    filename,
+                    file_info['patch'],
+                    file_review['line_comments'],
                     github_token
                 )
-
-            # 전체 요약 생성
-            final_summary = f"Overall Review:\n{overall_review}\n\nDetailed Reviews:\n{''.join(detailed_reviews)}"
-            
-            # post_review_comment(
-            #     repo,
-            #     pr_number,
-            #     latest_commit_id, 
-            #     file['filename'],  
-            #     file['changes'],  
-            #     f"AI Code Review:\n\n{review}",  
-            #     github_token
-            # )
-
-            post_pr_comment(
-                repo,
-                pr_number,
-                final_summary,
-                github_token
-            )
-
         else:
             logger.warning("파일을 찾을 수 없거나 PR 파일을 가져오는 데 실패했습니다.")
 
