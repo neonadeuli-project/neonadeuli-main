@@ -1,6 +1,7 @@
 import json
 import os
 import requests
+import re
 import logging
 from scripts.review_prompt import review_prompt
 
@@ -93,7 +94,7 @@ def post_review_comment(repo, pr_number, commit_sha, path, position, body, token
         logger.error(f"응답 내용: {e.response.text}")
 
 def summarize_reviews(all_reviews):
-    summary_prompt = f"다음은 여러 파일에 대한 코드 리뷰 결과입니다. 이를 간결하고 통합된 하나의 리뷰 코멘트로 요약해주세요:\n\n{''.join(all_reviews)}"
+    summary_prompt = f"다음은 전체적인 코드 리뷰 결과입니다 : \n\n{''.join(all_reviews)}"
     summary = review_code(summary_prompt)
     return summary
 
@@ -114,6 +115,70 @@ def post_pr_comment(repo, pr_number, body, token):
         logger.error(f"PR 코멘트 게시 중 오류 발생: {str(e)}")
         logger.error(f"응답 내용: {response.content if 'response' in locals() else '응답 없음'}")
 
+def post_line_comments(repo, pr_number, commit_sha, filename, patch, line_comments, token):
+    url = f"https://api.github.com/repos/{repo}/pulls/{pr_number}/comments"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28"
+    }
+
+    def get_line_numbers(patch):
+        lines = patch.split('\n')
+        line_numbers = []
+        current_line = 0
+        for line in lines:
+            if line.startswith('@@'):
+                current_line = int(line.split('+')[1].split(',')[0]) - 1
+            elif not line.startswith('-'):
+                current_line += 1
+                if line.startswith('+'):
+                    line_numbers.append(current_line)
+        return line_numbers
+
+    def post_single_comment(line_num, comment_text, position):
+        data = {
+            "body": comment_text.strip(),
+            "commit_id": commit_sha,
+            "path": filename,
+            "line": position
+        }
+        logger.debug(f"라인 {line_num}에 리뷰 코멘트 게시 중. URL: {url}")
+        logger.debug(f"헤더: {headers}")
+        logger.debug(f"데이터: {data}")
+
+        try:
+            response = requests.post(url, headers=headers, json=data)
+            response.raise_for_status()
+            logger.info(f"라인 {line_num}에 리뷰 코멘트가 성공적으로 게시되었습니다")
+        except requests.RequestException as e:
+            logger.error(f"라인 {line_num} 리뷰 코멘트 게시 중 오류 발생: {str(e)}")
+            logger.error(f"응답 내용: {response.content if 'response' in locals() else '응답 없음'}")
+            logger.error(f"응답 상태 코드: {e.response.status_code if 'response' in locals() else '알 수 없음'}")
+            logger.error(f"응답 헤더: {e.response.headers if 'response' in locals() else '알 수 없음'}")
+            logger.error(f"응답 내용: {e.response.text if 'response' in locals() else '알 수 없음'}")
+
+    line_numbers = get_line_numbers(patch)
+    
+    # 라인 코멘트 파싱 및 게시
+    for comment in line_comments.split('\n'):
+        match = re.match(r'(\d+):\s*(.*)', comment)
+        if match:
+            line_num, comment_text = match.groups()
+            try:
+                line_num = int(line_num)
+                if 0 <= line_num - 1 < len(line_numbers):
+                    position = line_numbers[line_num - 1]
+                    post_single_comment(line_num, comment_text, position)
+                else:
+                    logger.warning(f"라인 {line_num}이 유효한 범위를 벗어났습니다.")
+            except ValueError:
+                logger.warning(f"잘못된 라인 번호 형식: {line_num}")
+        else:
+            logger.warning(f"파싱할 수 없는 코멘트 형식: {comment}")
+
+    logger.info("모든 라인 코멘트 처리 완료")
+
 def main():
     try:
         github_token = os.environ['GITHUB_TOKEN']
@@ -130,19 +195,41 @@ def main():
         logger.info(f"PR 번호 리뷰 중: {pr_number}")
         
         pr_files = get_pr_files(repo, pr_number, github_token)
-        # latest_commit_id = get_latest_commit_id(repo, pr_number, github_token)
+        latest_commit_id = get_latest_commit_id(repo, pr_number, github_token)
 
-        all_reviews = []
+        all_code = ""
 
         if pr_files:
+            important_files = [f for f in pr_files if f['changes'] > 50 or f['filename'].endswith('.py')]
+
             for file in pr_files:
                 if file['status'] != 'removed':  
                     logger.info(f"파일 리뷰 중: {file['filename']}")
                     content = requests.get(file['raw_url']).text
-                    review = review_code(content)
-                    all_reviews.append(f"File: {file['filename']}\n{review}\n\n")
+                    all_code += f"File: {file['filename']}\n{content}\n\n"
 
-            combined_review = summarize_reviews(all_reviews)
+            # 전체 코드에 대한 간략한 리뷰
+            overall_review = summarize_reviews(all_code)
+
+            # 중요 파일에 대한 상세 리뷰
+            detailed_reviews = []
+            for file, content in important_files:
+                content = requests.get(file['raw_url']).text
+                review = review_code(content)
+                detailed_reviews.append(f"File: {file['filename']}\n{review}\n\n")
+
+                post_line_comments(
+                    repo, 
+                    pr_number, 
+                    latest_commit_id, 
+                    file['filename'], 
+                    file['patch'], 
+                    review, 
+                    github_token
+                )
+
+            # 전체 요약 생성
+            final_summary = f"Overall Review:\n{overall_review}\n\nDetailed Reviews:\n{''.join(detailed_reviews)}"
             
             # post_review_comment(
             #     repo,
@@ -157,7 +244,7 @@ def main():
             post_pr_comment(
                 repo,
                 pr_number,
-                f"AI Code Review 요약:\n\n{combined_review}",
+                final_summary,
                 github_token
             )
 
