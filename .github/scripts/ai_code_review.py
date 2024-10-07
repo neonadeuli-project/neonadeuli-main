@@ -213,10 +213,13 @@ def main():
 
             # 중요 파일에 대한 상세 리뷰
             detailed_reviews = []
-            for file, content in important_files:
+            for file in important_files:
                 content = requests.get(file['raw_url']).text
                 review = review_code(content)
                 detailed_reviews.append(f"File: {file['filename']}\n{review}\n\n")
+
+                line_comments_prompt = f"다음 {file['filename']} 파일의 코드를 리뷰하고, 중요한 라인에 대해 구체적인 코멘트를 제공해주세요. 형식은 '라인 번호: 코멘트'로 해주세요.\n\n{content}"
+                line_comments = review_code(line_comments_prompt)
 
                 post_line_comments(
                     repo, 
@@ -249,7 +252,7 @@ def main():
             )
 
         else:
-                logger.warning("파일을 찾을 수 없거나 PR 파일을 가져오는 데 실패했습니다.")
+            logger.warning("파일을 찾을 수 없거나 PR 파일을 가져오는 데 실패했습니다.")
 
     except KeyError as e:
         logger.error(f"환경 변수가 설정되지 않음: {str(e)}")
