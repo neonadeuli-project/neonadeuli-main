@@ -206,31 +206,38 @@ def generate_reviews(pr_files, repo, pr_number, latest_commit_id, github_token):
             content = requests.get(file['raw_url']).text
             all_code += f"File: {file['filename']}\n{content}\n\n"
 
+    if not all_code:
+        logger.warning("리뷰할 코드가 없습니다. 모든 파일이 삭제되었거나 내용을 가져오는 데 실패했습니다.")
+        return None, []
+    
     # 전체 코드에 대한 간략한 리뷰
     overall_review = summarize_reviews(all_code)
 
     # 중요 파일에 대한 상세 리뷰
     detailed_reviews = []
     for file in important_files:
-        content = requests.get(file['raw_url']).text
-        review = review_code(content)
-        detailed_reviews.append(f"File: {file['filename']}\n{review}\n\n")
+        try:
+            content = requests.get(file['raw_url']).text
+            review = review_code(content)
+            detailed_reviews.append(f"File: {file['filename']}\n{review}\n\n")
 
-        line_comments_prompt = (
-            f"다음 {file['filename']} 파일의 코드를 리뷰하고, 중요한 라인에 대해 구체적인 코멘트를 제공해주세요. "
-            f"형식은 '라인 번호: 코멘트'로 해주세요.\n\n{content}"
-        )
-        line_comments = review_code(line_comments_prompt)
-
-        post_line_comments(
-            repo,
-            pr_number,
-            latest_commit_id,
-            file['filename'],
-            file['patch'],
-            line_comments,
-            github_token
-        )
+            line_comments_prompt = (
+                f"다음 {file['filename']} 파일의 코드를 리뷰하고, 중요한 라인에 대해 구체적인 코멘트를 제공해주세요. "
+                f"형식은 '라인 번호: 코멘트'로 해주세요.\n\n{content}"
+            )
+            line_comments = review_code(line_comments_prompt)
+            post_line_comments(
+                repo,
+                pr_number,
+                latest_commit_id,
+                file['filename'],
+                file['patch'],
+                line_comments,
+                github_token
+            )
+        except requests.RequestException as e:
+            logger.error(f"중요 파일 내용을 가져오는 중 오류 발생: {str(e)}")
+            continue
     
     return overall_review, detailed_reviews
 
