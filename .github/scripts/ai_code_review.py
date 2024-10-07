@@ -179,11 +179,67 @@ def post_line_comments(repo, pr_number, commit_sha, filename, patch, line_commen
 
     logger.info("모든 라인 코멘트 처리 완료")
 
-def main():
+def get_environment_variables():
     try:
         github_token = os.environ['GITHUB_TOKEN']
         repo = os.environ['GITHUB_REPOSITORY']
         event_path = os.environ['GITHUB_EVENT_PATH']
+        return github_token, repo, event_path
+    except KeyError as e:
+        logger.error(f"환경 변수가 설정되지 않음: {str(e)}")
+        raise
+
+def fetch_pr_data(repo, pr_number, github_token):
+    pr_files = get_pr_files(repo, pr_number, github_token)
+    if not pr_files:
+        logger.warning("파일을 찾을 수 없거나 PR 파일을 가져오는 데 실패했습니다.")
+        return None, None
+    latest_commit_id = get_latest_commit_id(repo, pr_number, github_token)
+    return pr_files, latest_commit_id
+
+def generate_reviews(pr_files, repo, pr_number, latest_commit_id, github_token):
+    all_code = ""
+    important_files = [f for f in pr_files if f['changes'] > 50]
+    for file in pr_files:
+        if file['status'] != 'removed':
+            logger.info(f"파일 리뷰 중: {file['filename']}")
+            content = requests.get(file['raw_url']).text
+            all_code += f"File: {file['filename']}\n{content}\n\n"
+
+    # 전체 코드에 대한 간략한 리뷰
+    overall_review = summarize_reviews(all_code)
+
+    # 중요 파일에 대한 상세 리뷰
+    detailed_reviews = []
+    for file in important_files:
+        content = requests.get(file['raw_url']).text
+        review = review_code(content)
+        detailed_reviews.append(f"File: {file['filename']}\n{review}\n\n")
+
+        line_comments_prompt = (
+            f"다음 {file['filename']} 파일의 코드를 리뷰하고, 중요한 라인에 대해 구체적인 코멘트를 제공해주세요. "
+            f"형식은 '라인 번호: 코멘트'로 해주세요.\n\n{content}"
+        )
+        line_comments = review_code(line_comments_prompt)
+
+        post_line_comments(
+            repo,
+            pr_number,
+            latest_commit_id,
+            file['filename'],
+            file['patch'],
+            line_comments,
+            github_token
+        )
+    
+    return overall_review, detailed_reviews
+
+def create_review_summary(overall_review, detailed_reviews):
+    return f"Overall Review:\n{overall_review}\n\nDetailed Reviews:\n{''.join(detailed_reviews)}"
+
+def main():
+    try:
+        github_token, repo, event_path = get_environment_variables()
             
         logger.info(f"저장소 리뷰 시작: {repo}")
         logger.debug(f"GitHub 토큰 (처음 5자): {github_token[:5]}...")
@@ -191,68 +247,32 @@ def main():
         with open(event_path) as f:
             event = json.load(f)
 
-        pr_number = event['pull_request']['number']
-        logger.info(f"PR 번호 리뷰 중: {pr_number}")
+        pr_number = event.get('pull_request', {}).get('number')
+        if pr_number is None:
+            logger.error("PR 번호를 찾을 수 없습니다. GitHub 이벤트 파일이 pull_request 이벤트를 포함하고 있는지 확인하세요.")
+
+        logger.info(f"PR 번호 {pr_number} 리뷰 시작합니다.")
         
-        pr_files = get_pr_files(repo, pr_number, github_token)
-        latest_commit_id = get_latest_commit_id(repo, pr_number, github_token)
+        pr_files, latest_commit_id = fetch_pr_data(repo, pr_number, github_token)
+        if not pr_files:
+            return
+        
+        overall_review, detailed_reviews = generate_reviews(
+            pr_files, 
+            repo, 
+            pr_number, 
+            latest_commit_id, 
+            github_token
+        )
 
-        all_code = ""
+        final_summary = create_review_summary(overall_review, detailed_reviews)
 
-        if pr_files:
-            important_files = [f for f in pr_files if f['changes'] > 50]
-
-            for file in pr_files:
-                if file['status'] != 'removed':  
-                    logger.info(f"파일 리뷰 중: {file['filename']}")
-                    content = requests.get(file['raw_url']).text
-                    all_code += f"File: {file['filename']}\n{content}\n\n"
-
-            # 전체 코드에 대한 간략한 리뷰
-            overall_review = summarize_reviews(all_code)
-
-            # 중요 파일에 대한 상세 리뷰
-            detailed_reviews = []
-            for file in important_files:
-                content = requests.get(file['raw_url']).text
-                review = review_code(content)
-                detailed_reviews.append(f"File: {file['filename']}\n{review}\n\n")
-
-                line_comments_prompt = f"다음 {file['filename']} 파일의 코드를 리뷰하고, 중요한 라인에 대해 구체적인 코멘트를 제공해주세요. 형식은 '라인 번호: 코멘트'로 해주세요.\n\n{content}"
-                line_comments = review_code(line_comments_prompt)
-
-                post_line_comments(
-                    repo, 
-                    pr_number, 
-                    latest_commit_id, 
-                    file['filename'], 
-                    file['patch'], 
-                    line_comments, 
-                    github_token
-                )
-
-            # 전체 요약 생성
-            final_summary = f"Overall Review:\n{overall_review}\n\nDetailed Reviews:\n{''.join(detailed_reviews)}"
-            
-            # post_review_comment(
-            #     repo,
-            #     pr_number,
-            #     latest_commit_id, 
-            #     file['filename'],  
-            #     file['changes'],  
-            #     f"AI Code Review:\n\n{review}",  
-            #     github_token
-            # )
-
-            post_pr_comment(
-                repo,
-                pr_number,
-                final_summary,
-                github_token
-            )
-
-        else:
-            logger.warning("파일을 찾을 수 없거나 PR 파일을 가져오는 데 실패했습니다.")
+        post_pr_comment(
+            repo,
+            pr_number,
+            final_summary,
+            github_token
+        )
 
     except KeyError as e:
         logger.error(f"환경 변수가 설정되지 않음: {str(e)}")
