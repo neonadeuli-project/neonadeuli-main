@@ -73,6 +73,9 @@ class Settings(BaseSettings):
     # ALGORITHM : str
     # ACCESS_TOKEN_EXPIRE_MINUTES : int
 
+    # Groq API 
+    GROQ_API_KEY: str
+
     # 기본 이미지 URL
     # DEFAULT_IMAGE_URL : str
 

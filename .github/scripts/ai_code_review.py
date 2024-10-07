@@ -5,15 +5,13 @@ import re
 import groq
 import logging
 
-from dotenv import load_dotenv
+from app.backend.src.main.core.config import settings
 from scripts.review_prompt import review_prompt
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-load_dotenv('app/backend/.env')
-
-groq_client = groq.Groq(api_key=os.environ["GROQ_API_KEY"])
+groq_client = groq.Groq(api_key=settings.GROQ_API_KEY)
 
 def get_pr_files(repo, pr_number, token):
     url = f"https://api.github.com/repos/{repo}/pulls/{pr_number}/files"
