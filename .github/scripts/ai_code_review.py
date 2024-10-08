@@ -1,5 +1,6 @@
 import json
 import os
+from typing import List, Tuple
 import requests
 import re
 import groq
@@ -8,7 +9,8 @@ from review_config import (
     IGNORED_EXTENSIONS, 
     IGNORED_FILES, 
     IMPORTANT_FILE_CHANGE_THRESHOLD, 
-    IMPORTANT_FILE_CHANGE_RATIO
+    IMPORTANT_FILE_CHANGE_RATIO,
+    MAX_COMMENTS_PER_FILE
 )
 
 from scripts.review_prompt import (
@@ -190,24 +192,75 @@ def post_line_comments(repo, pr_number, commit_sha, filename, patch, line_commen
             logger.error(f"응답 헤더: {e.response.headers if 'response' in locals() else '알 수 없음'}")
             logger.error(f"응답 내용: {e.response.text if 'response' in locals() else '알 수 없음'}")
 
+    def parse_comments(line_comments: str) -> List[Tuple[int, str]]:
+        parsed_comments = []
+        for comment in line_comments.split('\n'):
+            match = re.match(r'(\d+):\s*(.*)', comment)
+            if match:
+                line_num, comment_text = match.groups()
+                try:
+                    line_num = int(line_num)
+                    parsed_comments.append((line_num, comment_text))
+                except ValueError:
+                    logger.warning(f"잘못된 라인 번호 형식: {line_num}")
+            else:
+                logger.warning(f"파싱할 수 없는 코멘트 형식: {comment}")
+        return parsed_comments
+
+    def evaluate_importance(comment: str) -> int:
+        # 여기에 코멘트의 중요도를 평가하는 로직을 구현합니다.
+        # 예를 들어, 특정 키워드의 존재 여부, 코멘트의 길이 등을 고려할 수 있습니다.
+        importance = 0
+        if "중요" in comment or "critical" in comment.lower():
+            importance += 5
+        if "버그" in comment or "bug" in comment.lower():
+            importance += 4
+        if "개선" in comment or "improvement" in comment.lower():
+            importance += 3
+        importance += len(comment) // 50  # 긴 코멘트에 약간의 가중치 부여
+        return importance
+
     line_numbers = get_line_numbers(patch)
+    parsed_comments = parse_comments(line_comments)
     
+    # 중요도에 따라 코멘트 정렬
+    sorted_comments = sorted(parsed_comments, key=lambda x: evaluate_importance(x[1]), reverse=True)
+
+    comments_posted = 0
     # 라인 코멘트 파싱 및 게시
-    for comment in line_comments.split('\n'):
-        match = re.match(r'(\d+):\s*(.*)', comment)
-        if match:
-            line_num, comment_text = match.groups()
-            try:
-                line_num = int(line_num)
-                if 0 <= line_num - 1 < len(line_numbers):
-                    position = line_numbers[line_num - 1]
-                    post_single_comment(line_num, comment_text, position)
-                else:
-                    logger.warning(f"라인 {line_num}이 유효한 범위를 벗어났습니다.")
-            except ValueError:
-                logger.warning(f"잘못된 라인 번호 형식: {line_num}")
+    for line_num, comment_text in sorted_comments[:MAX_COMMENTS_PER_FILE]:
+        if 0 <= line_num - 1 < len(line_numbers):
+            position = line_numbers[line_num - 1]
+            if post_single_comment(line_num, comment_text, position):
+                comments_posted += 1
         else:
-            logger.warning(f"파싱할 수 없는 코멘트 형식: {comment}")
+            logger.warning(f"라인 {line_num}이 유효한 범위를 벗어났습니다.")
+
+    # for comment in line_comments.split('\n'):
+        # if comments_posted >= MAX_COMMENTS_PER_FILE:
+        #     logger.info(f"{filename}: 최대 코멘트 수({MAX_COMMENTS_PER_FILE})에 도달했습니다. 나머지 코멘트는 생략됩니다.")
+        #     break
+
+        # match = re.match(r'(\d+):\s*(.*)', comment)
+        # if match:
+        #     line_num, comment_text = match.groups()
+        #     try:
+        #         line_num = int(line_num)
+        #         if 0 <= line_num - 1 < len(line_numbers):
+        #             position = line_numbers[line_num - 1]
+        #             if post_single_comment(line_num, comment_text, position):
+        #                 comments_posted += 1
+        #         else:
+        #             logger.warning(f"라인 {line_num}이 유효한 범위를 벗어났습니다.")
+        #     except ValueError:
+        #         logger.warning(f"잘못된 라인 번호 형식: {line_num}")
+        # else:
+        #     logger.warning(f"파싱할 수 없는 코멘트 형식: {comment}")
+    
+    if comments_posted == 0:
+        logger.info(f"{filename}: 추가된 코멘트가 없습니다.")
+    else:
+        logger.info(f"{filename}: 총 {comments_posted}개의 코멘트가 추가되었습니다.")
 
     logger.info("모든 라인 코멘트 처리 완료")
 
