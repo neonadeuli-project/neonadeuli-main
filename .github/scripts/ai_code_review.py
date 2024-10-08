@@ -177,6 +177,33 @@ def get_commit_messages(repo, pr_number, github_token):
     commits = response.json()
     return [commit['commit']['message'] for commit in commits]
 
+def get_changed_files(repo, pr_number, github_token):
+    url = f"https://api.github.com/repos/{repo}/pulls/{pr_number}/files"
+    headers = {
+        "Authorization": f"token {github_token}",
+        "Accept": "application/vnd.github.v3+json"
+    }
+    response = requests.get(url, headers=headers)
+    files = response.json()
+    
+    changed_files_info = []
+    for file in files:
+        status = file['status']
+        filename = file['filename']
+        additions = file['additions']
+        deletions = file['deletions']
+        
+        if status == 'added':
+            info = f"{filename} (추가, +{additions}, -0)"
+        elif status == 'removed':
+            info = f"{filename} (삭제)"
+        else:
+            info = f"{filename} (수정, +{additions}, -{deletions})"
+        
+        changed_files_info.append(info)
+    
+    return "\n".join(f"{i+1}. {info}" for i, info in enumerate(changed_files_info))
+
 def post_line_comments(repo, pr_number, commit_sha, filename, patch, line_comments, token):
     url = f"https://api.github.com/repos/{repo}/pulls/{pr_number}/comments"
     headers = {
@@ -355,9 +382,12 @@ def generate_reviews(pr_files, repo, pr_number, latest_commit_id, github_token):
 
     pr_context = get_pr_context(repo, pr_number, github_token)
     commit_messages = get_commit_messages(repo, pr_number, github_token)
+    changed_files = get_changed_files(repo, pr_number, github_token)
     
-    # 전체 코드에 대한 리뷰
-    review_prompt = get_review_prompt(all_code, pr_context, commit_messages)
+    # 개선된 리뷰 프롬프트 생성
+    review_prompt = get_review_prompt(all_code, pr_context, commit_messages, changed_files)
+
+    # 전체 코드에 대한 상세한 리뷰
     overall_review = review_code_groq(review_prompt)
 
     # 중요 파일에 대한 상세 리뷰 (라인 별 코멘트 비활성화)

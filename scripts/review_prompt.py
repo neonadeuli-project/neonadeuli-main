@@ -80,7 +80,7 @@ OVERALL_COMMENTS_PROMPT = """
 {overall_review}
 """
 
-def get_review_prompt(all_code, pr_context, commit_messages):
+def get_review_prompt(all_code, pr_context, commit_messages, changed_files):
     formatted_commit_messages = "\n".join([f"- {msg}" for msg in commit_messages])
     return REVIEW_PROMPT.format(
         title=pr_context['title'],
@@ -88,6 +88,7 @@ def get_review_prompt(all_code, pr_context, commit_messages):
         base_branch=pr_context['base_branch'],
         head_branch=pr_context['head_branch'],
         commit_messages=formatted_commit_messages,
+        changed_files=changed_files,
         all_code=all_code
     )
 
