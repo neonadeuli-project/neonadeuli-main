@@ -4,6 +4,12 @@ import requests
 import re
 import groq
 import logging
+from review_config import (
+    IGNORED_EXTENSIONS, 
+    IGNORED_FILES, 
+    IMPORTANT_FILE_CHANGE_THRESHOLD, 
+    IMPORTANT_FILE_CHANGE_RATIO
+)
 
 from scripts.review_prompt import (
     get_review_prompt,
@@ -224,21 +230,46 @@ def fetch_pr_data(repo, pr_number, github_token):
     return pr_files, latest_commit_id
 
 def is_important_file(file):
+    filename = file['filename']
+    if filename in IGNORED_FILES:
+        logger.debug(f"무시된 파일: {filename}")
+        return False
+    
+    if any(filename.endswith(ext) for ext in IGNORED_EXTENSIONS):
+        logger.debug(f"무시할 확장자 파일: {filename}")
+        return False
+
+    if file['status'] == 'removed':
+        logger.info(f"삭제된 파일: {file['filename']}")
+        return True
+    
     total_lines = file.get('additions', 0) + file.get('deletions', 0)
     change_ratio = total_lines / file.get('changes', 1)
-    return file['changes'] > 50 or change_ratio > 0.3
+    is_important = file['changes'] > IMPORTANT_FILE_CHANGE_THRESHOLD or change_ratio > IMPORTANT_FILE_CHANGE_RATIO
+    
+    if is_important:
+        logger.info(f"중요 파일로 선정: {file['filename']} (변경: {file['changes']}줄, 비율: {change_ratio:.2f})")
+    else:
+        logger.debug(f"일반 파일: {file['filename']} (변경: {file['changes']}줄, 비율: {change_ratio:.2f})")
+    
+    return is_important
 
 def generate_reviews(pr_files, repo, pr_number, latest_commit_id, github_token):
     all_code = ""
     important_files = [f for f in pr_files if is_important_file(f)]
+
+    logger.info(f"총 {len(pr_files)}개 파일 중 {len(important_files)}개 파일이 중요 파일로 선정되었습니다.")
+    
     for file in pr_files:
-        if file['status'] != 'removed':
+        if file['status'] == 'removed':
+            all_code += f"File: {file['filename']} (DELETED)\n\n"
+        else:
             logger.info(f"파일 리뷰 중: {file['filename']}")
             content = requests.get(file['raw_url']).text
             all_code += f"File: {file['filename']}\n{content}\n\n"
 
     if not all_code:
-        logger.warning("리뷰할 코드가 없습니다. 모든 파일이 삭제되었거나 내용을 가져오는 데 실패했습니다.")
+        logger.warning("리뷰할 코드가 없습니다. 모든 파일 내용을 가져오는 데 실패했습니다.")
         return None, []
     
     # 전체 코드에 대한 간략한 리뷰
@@ -247,9 +278,13 @@ def generate_reviews(pr_files, repo, pr_number, latest_commit_id, github_token):
 
     # 중요 파일에 대한 상세 리뷰
     for file in important_files:
-        content = requests.get(file['raw_url']).text
-        file_review_prompt = get_file_review_prompt(file['filename'], content)
-        file_review = review_code_groq(file_review_prompt)
+        logger.info(f"중요 파일 상세 리뷰 중: {file['filename']}")
+        if file['status'] == 'removed':
+            file_review = f"파일 '{file['filename']}'이(가) 삭제되었습니다. 이 변경이 적절한지 확인해 주세요."
+        else:
+            content = requests.get(file['raw_url']).text
+            file_review_prompt = get_file_review_prompt(file['filename'], content)
+            file_review = review_code_groq(file_review_prompt)
         
         # 파일 전체에 대한 리뷰 코멘트
         post_file_comment(
