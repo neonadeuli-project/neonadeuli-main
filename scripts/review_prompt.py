@@ -8,7 +8,7 @@ Here is the new PR information.
 
 Please understand and review the purpose and context of the change considering PR information and commit message.
 Please be sure to thoroughly analyze and review the following format and provide a comprehensive review.
-Please find the 1st priority that needs to be improved from the total code you have provided and fill it out in the format below.
+Find just one area of your current code that needs the most improvement and write it in the format below.
 --------------------------------------------------------
 ## 🧑🏻‍💻 주요 기능
 
