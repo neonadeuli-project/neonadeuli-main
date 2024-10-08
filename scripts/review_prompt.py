@@ -1,5 +1,13 @@
 REVIEW_PROMPT = """
-당신은 전문적인 코드 리뷰어입니다. 주어진 코드를 분석하고 다음 형식으로 리뷰를 제공해주세요:
+당신은 전문적인 코드 리뷰어입니다. 
+다음은 해당 PR 정보입니다.
+- 제목: {title}
+- 설명: {description}
+- Base 브랜치: {base_branch}
+- Head 브랜치: {head_branch}
+- 커밋 메시지: {commit_messages}
+
+주어진 코드를 분석하고 다음 형식으로 리뷰를 제공해주세요:
 
 ## 전체 코드 리뷰
 
@@ -13,9 +21,10 @@ REVIEW_PROMPT = """
 [구체적인 개선 제안, 코드 예시 포함]
 
 전체 코드:
-{code}
+{all_code}
 
 응답은 위의 형식을 따라 작성해 주시되, 구체적이고 건설적인 피드백을 제공해 주세요.
+PR 정보와 커밋 메시지를 고려하여 변경 사항의 목적과 맥락을 이해하고 리뷰해 주세요.
 """
 
 FILE_REVIEW_PROMPT = """
@@ -52,8 +61,16 @@ OVERALL_COMMENTS_PROMPT = """
 {overall_review}
 """
 
-def get_review_prompt(code):
-    return REVIEW_PROMPT.format(code=code)
+def get_review_prompt(all_code, pr_context, commit_messages):
+    formatted_commit_messages = "\n".join([f"- {msg}" for msg in commit_messages])
+    return REVIEW_PROMPT.format(
+        title=pr_context['title'],
+        description=pr_context['description'],
+        base_branch=pr_context['base_branch'],
+        head_branch=pr_context['head_branch'],
+        commit_messages=formatted_commit_messages,
+        all_code=all_code
+    )
 
 def get_file_review_prompt(filename, content):
     return FILE_REVIEW_PROMPT.format(filename=filename, content=content)

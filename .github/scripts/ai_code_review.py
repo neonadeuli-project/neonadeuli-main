@@ -149,6 +149,35 @@ def post_pr_comment(repo, pr_number, body, token):
         logger.error(f"PR 코멘트 게시 중 오류 발생: {str(e)}")
         logger.error(f"응답 내용: {response.content if 'response' in locals() else '응답 없음'}")
 
+def get_pr_context(repo, pr_number, github_token):
+    url = f"https://api.github.com/repos/{repo}/pulls/{pr_number}"
+    headers = {
+        "Authorization": f"Bearer {github_token}",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28"
+    }
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
+    pr_data = response.json()
+    return {
+        "title": pr_data['title'],
+        "description": pr_data['body'],
+        "base_branch": pr_data['base']['ref'],
+        "head_branch": pr_data['head']['ref'],
+    }
+
+def get_commit_messages(repo, pr_number, github_token):
+    url = f"https://api.github.com/repos/{repo}/pulls/{pr_number}/commits"
+    headers = {
+        "Authorization": f"Bearer {github_token}",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28"
+    }
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
+    commits = response.json()
+    return [commit['commit']['message'] for commit in commits]
+
 def post_line_comments(repo, pr_number, commit_sha, filename, patch, line_comments, token):
     url = f"https://api.github.com/repos/{repo}/pulls/{pr_number}/comments"
     headers = {
@@ -324,9 +353,12 @@ def generate_reviews(pr_files, repo, pr_number, latest_commit_id, github_token):
     if not all_code:
         logger.warning("리뷰할 코드가 없습니다. 모든 파일 내용을 가져오는 데 실패했습니다.")
         return None, []
+
+    pr_context = get_pr_context(repo, pr_number, github_token)
+    commit_messages = get_commit_messages(repo, pr_number, github_token)
     
     # 전체 코드에 대한 간략한 리뷰
-    review_prompt = get_review_prompt(all_code)
+    review_prompt = get_review_prompt(all_code, pr_context, commit_messages)
     overall_review = review_code_groq(review_prompt)
 
     # 중요 파일에 대한 상세 리뷰 (라인 별 코멘트 비활성화)
