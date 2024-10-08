@@ -36,6 +36,7 @@ Full Code: {all_code}
 
 If you have to put in a code block, please put only the code that needs to be improved briefly.
 Please write one sentence within 70 characters, including the maximum space, that you need to explain.
+If you write one sentence for readability, please write the next sentence in the next column instead of the next one.
 
 The person receiving this feedback is a Korean developer.
 Please make sure to follow the above format strictly in Korean, but please provide specific and constructive feedback.
