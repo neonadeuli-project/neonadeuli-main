@@ -4,13 +4,13 @@ REVIEW_PROMPT = """
 다음은 해당 PR 정보입니다.
 - 제목: {title}
 - 설명: {description}
-- Base 브랜치: {base_branch}
-- Head 브랜치: {head_branch}
 - 커밋 메시지: {commit_messages}
 - 변경된 파일: {changed_files}
 - 전체 코드: {all_code}
 
-주어진 코드와 PR 정보를 철저히 분석 및 검토하고 다음 형식으로 종합적인 리뷰를 제공해주세요:
+PR 정보와 커밋 메시지를 고려하여 변경 사항의 목적과 맥락을 이해하고 리뷰해 주세요.
+
+철저히 분석 및 검토하여 반드시 아래와 같은 형식으로 종합적인 리뷰를 제공해주세요:
 
 ## 전체 코드 리뷰
 
@@ -33,8 +33,6 @@ REVIEW_PROMPT = """
    - 이유: [왜 이 변경이 더 나은지 설명]
 
 응답은 위의 형식을 따라 작성해 주시되, 구체적이고 건설적인 피드백을 제공해 주세요.
-PR 정보와 커밋 메시지를 고려하여 변경 사항의 목적과 맥락을 이해하고 리뷰해 주세요.
-또한, 프로젝트의 전반적인 아키텍처, 코딩 표준, 그리고 팀의 모범 사례를 고려하여 리뷰를 진행해 주세요.
 """
 
 FILE_REVIEW_PROMPT = """
@@ -76,8 +74,6 @@ def get_review_prompt(all_code, pr_context, commit_messages, changed_files):
     return REVIEW_PROMPT.format(
         title=pr_context['title'],
         description=pr_context['description'],
-        base_branch=pr_context['base_branch'],
-        head_branch=pr_context['head_branch'],
         commit_messages=formatted_commit_messages,
         changed_files=changed_files,
         all_code=all_code

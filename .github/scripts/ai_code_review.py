@@ -159,9 +159,7 @@ def get_pr_context(repo, pr_number, github_token):
     pr_data = response.json()
     return {
         "title": pr_data['title'],
-        "description": pr_data['body'],
-        "base_branch": pr_data['base']['ref'],
-        "head_branch": pr_data['head']['ref'],
+        "description": pr_data['body']
     }
 
 def get_commit_messages(repo, pr_number, github_token):
