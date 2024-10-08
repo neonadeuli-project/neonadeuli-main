@@ -12,25 +12,25 @@ Please find the 1st priority that needs to be improved from the total code you h
 --------------------------------------------------------
 ## 🧑🏻‍💻 주요 기능
 
-[핵심 기능, 입력 및 출력 예상, 처리하는 특정 예외 사례를 포함하여 이 파일의 주요 기능에 대한 간략한 설명을 제공하세요]
+[Provide a brief description of the main features of this file, including its core functionality, expected input and output, and any specific exception cases it handles.]
 
 ## 🔍 개선할 점
 
-[성능 병목 현상, 가독성 문제, 보안 취약점 등 개선이 필요한 모든 영역을 나열합니다.]
+[Write down any areas that need improvement, including performance bottlenecks, readability issues, and security vulnerabilities.]
 
 ## 📢 제안된 솔루션
 
 1. 현재 코드
 
-[문제가 있는 코드 조각]
+[problematic code fragment]
 
 2. 권장되는 변경
 
-[업데이트된 코드 조각]
+[updated code snippet]
 
 3. 변경 이유
 
-[성능, 가독성, 보안 등을 고려하여 새로운 접근 방식이 더 나은 간략한 이유]
+[Brief reasons why the new approach is better, considering performance, readability, security, etc.]
 --------------------------------------------------------
 
 Full Code: {all_code}
