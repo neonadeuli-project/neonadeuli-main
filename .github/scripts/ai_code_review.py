@@ -61,7 +61,7 @@ def review_code_groq(prompt):
         response = groq_client.chat.completions.create(
             model="llama-3.1-70b-versatile",  
             messages=[
-                {"role": "system", "content": "당신은 FANNG 시니어 개발자 출신의 전문적인 코드 리뷰어입니다. 특히 백엔드의 경우 Python, FastAPI, 프론트의 경우 React와 Next.js에 깊은 조예와 전문성을 가지고 있습니다. "},
+                {"role": "system", "content": "You are a professional code reviewer from FANNG Senior Developer."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.7,

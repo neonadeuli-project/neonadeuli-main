@@ -1,12 +1,13 @@
 REVIEW_PROMPT = """
-다음은 해당 PR 정보입니다.
-- 제목: {title}
-- 설명: {description}
-- 커밋 메시지: {commit_messages}
-- 변경된 파일: {changed_files}
+You have deep knowledge and expertise in Python, FastAPI for the back end, React and Next.js for the front.
+Here is the new PR information.
+- title: {title}
+- description: {description}
+- commit messages: {commit_messages}
+- changed files: {changed_files}
 
-PR 정보와 커밋 메시지를 고려하여 변경 사항의 목적과 맥락을 이해하고 리뷰해 주세요.
-철저히 분석 및 검토하여 반드시 아래와 같은 형식을 엄격하게 지켜서 종합적인 리뷰를 제공해주세요:
+Please understand and review the purpose and context of the change considering PR information and commit message.
+Please be sure to thoroughly analyze and review the following format and provide a comprehensive review.
 --------------------------------------------------------
 ## 전체 코드 리뷰
 
@@ -25,9 +26,10 @@ PR 정보와 커밋 메시지를 고려하여 변경 사항의 목적과 맥락�
 - 이유
 --------------------------------------------------------
 
-전체 코드: {all_code}
+Full Code: {all_code}
 
-응답은 꼭 위의 형식을 엄격하게 따라 작성해 주시되, 구체적이고 건설적인 피드백을 제공해 주세요.
+The person receiving this feedback is a Korean developer.
+Please make sure to follow the above format strictly in Korean, but please provide specific and constructive feedback.
 """
 
 FILE_REVIEW_PROMPT = """
