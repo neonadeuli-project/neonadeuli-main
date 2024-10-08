@@ -57,8 +57,7 @@ def get_latest_commit_id(repo, pr_number, token):
     pr_data = response.json()
     return pr_data['head']['sha']
 
-def review_code_groq(pr_content):
-    prompt = get_review_prompt(pr_content)
+def review_code_groq(prompt):
     try:
         response = groq_client.chat.completions.create(
             model="llama-3.1-70b-versatile",  
@@ -74,30 +73,30 @@ def review_code_groq(pr_content):
         logger.error(f"Groq API 호출 중 오류 발생: {str(e)}")
         return f"코드 리뷰 중 발생한 에러: {str(e)}"
 
-def review_code_ollama(pr_content):
-    prompt = get_review_prompt(pr_content)
-    url = 'http://localhost:11434/api/generate'
-    data = {
-        "model": "llama3.1",
-        "prompt": prompt,
-        "stream": False,
-        "options": {
-            "temperature": 0.7,
-            "top_p": 0.8,
-            "top_k": 40,
-            "num_predict": 1024
-        }
-    }
-    logger.debug(f"코드 리뷰 중. URL: {url}")
-    logger.debug(f"요청 데이터: {data}")
+# def review_code_ollama(pr_content):
+#     prompt = get_review_prompt(pr_content)
+#     url = 'http://localhost:11434/api/generate'
+#     data = {
+#         "model": "llama3.1",
+#         "prompt": prompt,
+#         "stream": False,
+#         "options": {
+#             "temperature": 0.7,
+#             "top_p": 0.8,
+#             "top_k": 40,
+#             "num_predict": 1024
+#         }
+#     }
+#     logger.debug(f"코드 리뷰 중. URL: {url}")
+#     logger.debug(f"요청 데이터: {data}")
 
-    try:
-        response = requests.post(url, json=data)
-        response.raise_for_status()
-        return response.json()['response']
-    except requests.RequestException as e:
-        logger.error(f"코드 리뷰 중 오류 발생: {str(e)}")
-        return f"코드 리뷰 중 발생한 에러: {str(e)}"
+#     try:
+#         response = requests.post(url, json=data)
+#         response.raise_for_status()
+#         return response.json()['response']
+#     except requests.RequestException as e:
+#         logger.error(f"코드 리뷰 중 오류 발생: {str(e)}")
+#         return f"코드 리뷰 중 발생한 에러: {str(e)}"
     
 def post_review_comment(repo, pr_number, commit_sha, path, position, body, token):
     url = f"https://api.github.com/repos/{repo}/pulls/{pr_number}/comments"
@@ -357,7 +356,7 @@ def generate_reviews(pr_files, repo, pr_number, latest_commit_id, github_token):
     pr_context = get_pr_context(repo, pr_number, github_token)
     commit_messages = get_commit_messages(repo, pr_number, github_token)
     
-    # 전체 코드에 대한 간략한 리뷰
+    # 전체 코드에 대한 리뷰
     review_prompt = get_review_prompt(all_code, pr_context, commit_messages)
     overall_review = review_code_groq(review_prompt)
 
