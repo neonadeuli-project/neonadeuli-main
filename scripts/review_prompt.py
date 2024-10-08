@@ -35,7 +35,7 @@ Please find the 1st priority that needs to be improved from the total code you h
 
 Full Code: {all_code}
 
-If you have to put in a code block, please put only the code that needs to be improved briefly.
+If you need to put in a code block, keep it brief, no more than 10 lines of code that needs improvement.
 Please write one sentence within 70 characters, including the maximum space, that you need to explain.
 If you write one sentence for readability, please write the next sentence in the next column instead of the next one.
 
