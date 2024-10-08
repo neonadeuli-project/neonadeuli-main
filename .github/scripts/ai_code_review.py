@@ -403,8 +403,8 @@ def is_important_file(file, total_pr_changes):
     additions = file.get('additions', 0)
     deletions = file.get('deletions', 0)
 
-    # 변경 비율을 추가와 삭제의 절대값 합으로 계산 (변경의 강도를 계산)
-    change_ratio = (additions + deletions) / max(total_changes, 1)
+    # 파일의 전체 크기 대비 변경된 라인 수의 비율
+    change_ratio = total_changes / total_pr_changes if total_pr_changes > 0 else 0
     importance_threshold = get_importance_threshold(file, total_pr_changes)
 
     is_important = total_changes > IMPORTANT_FILE_CHANGE_THRESHOLD or change_ratio > importance_threshold
