@@ -337,7 +337,56 @@ def fetch_pr_data(repo, pr_number, github_token):
     latest_commit_id = get_latest_commit_id(repo, pr_number, github_token)
     return pr_files, latest_commit_id
 
-def is_important_file(file):
+def get_importance_threshold(file, total_pr_changes):
+    base_threshold = 0.5  # 기본 임계값을 0.5로 설정 (더 많은 파일을 중요하게 간주)
+    
+    # 파일 확장자에 따른 가중치
+    extension_weights = {
+        # 백엔드 파일 (높은 가중치)
+        '.py': 1.2,    # Python 파일
+        
+        # 프론트엔드 파일 (높은 가중치)
+        '.js': 1.2,    # JavaScript 파일
+        '.jsx': 1.2,   # React JSX 파일
+        '.ts': 1.2,    # TypeScript 파일
+        '.tsx': 1.2,   # React TypeScript 파일
+        
+        # 스타일 파일 (중간 가중치)
+        '.css': 1.0,   # CSS 파일
+        '.scss': 1.0,  # SCSS 파일
+        
+        # 설정 파일 (낮은 가중치)
+        '.json': 0.9,  # JSON 설정 파일
+        '.yml': 0.9,   # YAML 설정 파일
+        '.env': 0.9,   # 환경 변수 파일
+        
+        # 문서 파일 (가장 낮은 가중치)
+        '.md': 0.7,    # Markdown 문서
+        '.txt': 0.7,   # 텍스트 문서
+    }
+    
+    # 파일 확장자 추출
+    _, ext = os.path.splitext(file['filename'])
+    
+    # 확장자에 따른 가중치 적용 (기본값 1.0)
+    weight = extension_weights.get(ext.lower(), 1.0)
+    
+    # PR 전체 변경 크기에 따른 조정 (팀 규모가 작으므로 기준을 낮춤)
+    if total_pr_changes > 500:  # 대규모 PR 기준을 500줄로 낮춤
+        base_threshold *= 0.9  # 대규모 PR의 경우 임계값 낮춤
+    elif total_pr_changes < 50:  # 소규모 PR 기준을 50줄로 낮춤
+        base_threshold *= 1.1  # 소규모 PR의 경우 임계값 높임
+    
+    # 파일 크기에 따른 조정
+    file_size = file.get('changes', 0)
+    if file_size < 30:  # 작은 파일 기준을 30줄로 낮춤
+        base_threshold *= 1.2  # 작은 파일의 경우 임계값 높임
+    elif file_size > 300:  # 큰 파일 기준을 300줄로 낮춤
+        base_threshold *= 0.8  # 큰 파일의 경우 임계값 낮춤
+    
+    return min(base_threshold * weight, 1.0)  # 최대값을 1.0으로 제한
+
+def is_important_file(file, total_pr_changes):
     filename = file['filename']
     if filename in IGNORED_FILES:
         logger.debug(f"무시된 파일: {filename}")
@@ -351,22 +400,31 @@ def is_important_file(file):
         logger.info(f"삭제된 파일: {file['filename']}")
         return True
     
-    total_lines = file.get('additions', 0) + file.get('deletions', 0)
-    change_ratio = total_lines / file.get('changes', 1)
-    is_important = file['changes'] > IMPORTANT_FILE_CHANGE_THRESHOLD or change_ratio > IMPORTANT_FILE_CHANGE_RATIO
+    total_changes = file.get('changes', 0)
+    additions = file.get('additions', 0)
+    deletions = file.get('deletions', 0)
+
+    # 변경 비율을 추가와 삭제의 절대값 합으로 계산 (변경의 강도를 계산)
+    change_ratio = (additions + deletions) / max(total_changes, 1)
+    importance_threshold = get_importance_threshold(file, total_pr_changes)
+
+    is_important = total_changes > IMPORTANT_FILE_CHANGE_THRESHOLD or change_ratio > importance_threshold
     
     if is_important:
-        logger.info(f"중요 파일로 선정: {file['filename']} (변경: {file['changes']}줄, 비율: {change_ratio:.2f})")
+        logger.info(f"중요 파일로 선정: {filename} (변경: {total_changes}줄, 추가: {additions}, 삭제: {deletions}, 비율: {change_ratio:.2f}, 임계값: {importance_threshold:.2f})")
     else:
-        logger.debug(f"일반 파일: {file['filename']} (변경: {file['changes']}줄, 비율: {change_ratio:.2f})")
+        logger.debug(f"일반 파일: {filename} (변경: {total_changes}줄, 추가: {additions}, 삭제: {deletions}, 비율: {change_ratio:.2f}, 임계값: {importance_threshold:.2f})")
     
     return is_important
 
 def generate_reviews(pr_files, repo, pr_number, latest_commit_id, github_token):
     all_code = ""
-    important_files = [f for f in pr_files if is_important_file(f)]
+    total_pr_changes = sum(file.get('changes', 0) for file in pr_files)
+
+    important_files = [f for f in pr_files if is_important_file(f, total_pr_changes)]
 
     logger.info(f"총 {len(pr_files)}개 파일 중 {len(important_files)}개 파일이 중요 파일로 선정되었습니다.")
+    logger.info(f"PR 전체 변경 크기: {total_pr_changes}줄")
     
     for file in pr_files:
         if file['status'] == 'removed':
