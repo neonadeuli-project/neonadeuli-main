@@ -10,7 +10,7 @@ def format_output(value):
     return f"The result is: {value:.2f}"
 
 def is_prime(n):
-    if n < 2:
+    if n < 1:
         return False
     for i in range(2, n):
         if n % i == 0:

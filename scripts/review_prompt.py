@@ -8,7 +8,10 @@ Here is the new PR information.
 
 Please understand and review the purpose and context of the change considering PR information and commit message.
 Please be sure to thoroughly analyze and review the following format and provide a comprehensive review.
-Please find the 1st priority that needs to be improved from the total code you have provided and fill it out in the format below.
+If the author has written a post in accordance with the 🙏 review requirements (optional) written in the PR description section, 
+please provide a solution to resolve the content first.
+If not, please find one part of the entire code provided that needs the most improvement and provide a solution.
+Please find the number one priority that needs improvement in the entire code you provided and write it strictly in the format below.
 --------------------------------------------------------
 ## 🧑🏻‍💻 주요 기능
 
