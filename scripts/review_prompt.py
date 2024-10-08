@@ -35,7 +35,6 @@ Please be sure to thoroughly analyze and review the following format and provide
 Full Code: {all_code}
 
 If you have to put in a code block, please put only the code that needs to be improved briefly.
-Write only the part where major changes are made within the code block and omit the rest as '...' to make it as short as possible.
 Please write one sentence within 70 characters, including the maximum space, that you need to explain.
 If you write one sentence for readability, please write the next sentence in the next column instead of the next one.
 
