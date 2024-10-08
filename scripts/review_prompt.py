@@ -9,17 +9,17 @@ Here is the new PR information.
 Please understand and review the purpose and context of the change considering PR information and commit message.
 Please be sure to thoroughly analyze and review the following format and provide a comprehensive review.
 --------------------------------------------------------
-### 🧑🏻‍💻 개선 필요(최대 5개 핵심 영역 나열)
+## 🧑🏻‍💻 개선 필요(최대 5개 핵심 영역 나열 (최대 공백 포함 70자 내의 한 문장))
 
-### 🔍 제안(가능한 경우 코드 예시 제공)
+## 🔍 제안(가능한 경우 코드 예시 (5줄 이하의 코드) 제공)
 
-### 📢 제안된 솔루션
+## 📢 제안된 솔루션
 
-   1. 현재 코드: [문제가 있는 코드 조각]
+   1. 현재 코드: [문제가 있는 코드 조각 (5줄 이하의 코드)]
 
-   2. 권장되는 변경: [업데이트된 코드]
+   2. 권장되는 변경: [업데이트된 코드 (5줄 이하의 코드)]
 
-   3. 변경 이유: [변경이 더 좋은 이유에 대한 설명]
+   3. 변경 이유: [변경이 더 좋은 이유에 대한 설명 (최대 공백 포함 70자 내의 한 문장)]
 --------------------------------------------------------
 
 Full Code: {all_code}
