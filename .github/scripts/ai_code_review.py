@@ -65,7 +65,7 @@ def review_code_groq(prompt):
                 {"role": "user", "content": prompt}
             ],
             temperature=0.7,
-            max_tokens=1024
+            max_tokens=2048
         )
         return response.choices[0].message.content
     except Exception as e:
