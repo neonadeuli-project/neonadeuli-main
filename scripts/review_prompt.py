@@ -9,20 +9,33 @@ Here is the new PR information.
 Please understand and review the purpose and context of the change considering PR information and commit message.
 Please be sure to thoroughly analyze and review the following format and provide a comprehensive review.
 --------------------------------------------------------
-## 🧑🏻‍💻 개선 필요(최대 5개 핵심 영역 나열 (최대 공백 포함 70자 내의 한 문장))
+## 🧑🏻‍💻 주요 기능
 
-## 🔍 제안(가능한 경우 코드 예시 (5줄 이하의 코드) 제공)
+[핵심 기능, 입력 및 출력 예상, 처리하는 특정 예외 사례를 포함하여 이 파일의 주요 기능에 대한 간략한 설명을 제공하세요]
+
+## 🔍 개선할 점
+
+[성능 병목 현상, 가독성 문제, 보안 취약점 등 개선이 필요한 모든 영역을 나열합니다.]
 
 ## 📢 제안된 솔루션
 
-   1. 현재 코드: [문제가 있는 코드 조각 (5줄 이하의 코드)]
+1. 현재 코드
 
-   2. 권장되는 변경: [업데이트된 코드 (5줄 이하의 코드)]
+[문제가 있는 코드 조각]
 
-   3. 변경 이유: [변경이 더 좋은 이유에 대한 설명 (최대 공백 포함 70자 내의 한 문장)]
+2. 권장되는 변경
+
+[업데이트된 코드 조각]
+
+3. 변경 이유
+
+[성능, 가독성, 보안 등을 고려하여 새로운 접근 방식이 더 나은 간략한 이유]
 --------------------------------------------------------
 
 Full Code: {all_code}
+
+If you have to put in a code block, please put only the code that needs to be improved briefly.
+Please write one sentence within 70 characters, including the maximum space, that you need to explain.
 
 The person receiving this feedback is a Korean developer.
 Please make sure to follow the above format strictly in Korean, but please provide specific and constructive feedback.
