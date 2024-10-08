@@ -447,11 +447,11 @@ def main():
         )
 
         if overall_review:
-            comment = get_total_comments_prompt(overall_review)
+            # comment = get_total_comments_prompt(overall_review)
             post_pr_comment(
                 repo,
                 pr_number,
-                comment,
+                overall_review,
                 github_token
             )
 
