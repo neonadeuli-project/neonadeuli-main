@@ -1,15 +1,11 @@
 name: PR Review Reminder
 
 on:
-    # schedule:
+  schedule:
     # 한국 시간 12시에 실행 (UTC 기준 03시)
-    # - cron: '0 3 * * *'
-    # 한국 시간 18시에 실행 (UTC 기준 09시)
-    # - cron: '0 9 * * *'
-
-    # PR 이벤트에 대해 동작하도록 설정
-  pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
+    - cron: '0 3 * * *'
+    # 한국 시간 21시에 실행 (UTC 기준 09시)
+    - cron: '0 12 * * *'
 
   workflow_dispatch:
 
