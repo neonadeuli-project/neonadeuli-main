@@ -2,7 +2,7 @@ from typing import Annotated, Any
 from dotenv import load_dotenv
 
 # load .env file
-load_dotenv()
+load_dotenv('app/backend/.env')
 
 from pydantic import (
     PostgresDsn,
@@ -72,6 +72,9 @@ class Settings(BaseSettings):
     # SECRET_KEY : str
     # ALGORITHM : str
     # ACCESS_TOKEN_EXPIRE_MINUTES : int
+
+    # Groq API 
+    GROQ_API_KEY: str
 
     # 기본 이미지 URL
     # DEFAULT_IMAGE_URL : str
