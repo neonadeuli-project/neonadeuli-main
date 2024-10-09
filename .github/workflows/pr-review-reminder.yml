@@ -13,14 +13,20 @@ on:
 
   workflow_dispatch:
 
+env:
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  OWNER: ${{ github.repository_owner }}
+  REPO: ${{ github.event.repository.name }}
+  REVIEWER_MAP: '[
+    {"github": "Miaash", "discord": "<@938048520374603817>"}, 
+    {"github": "viaunixue", "discord": "<@386917108455309316>"},
+    {"github": "swwho96", "discord": "<@816298263614455839>"},
+    {"github": "PracticeKJY", "discord": "<@460816530007916554>"}
+   ]'
+
 jobs:
   review-reminder:
     runs-on: ubuntu-latest
-
-    env:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      OWNER: ${{ github.repository_owner }}
-      REPO: ${{ github.event.repository.name }}
 
     steps:
       - name: Check out the code
@@ -29,13 +35,6 @@ jobs:
       - name: Get open PRs and requested reviewers
         id: get-prs
         run: |
-          reviewer_map='[
-            {"github": "Miaash", "discord": "<@938048520374603817>"},
-            {"github": "viaunixue", "discord": "<@386917108455309316>"},
-            {"github": "swwho96", "discord": "<@816298263614455839>"},
-            {"github": "PracticeKJY", "discord": "<@460816530007916554>"}
-          ]'
-
           prs=$(gh api graphql -F owner=$OWNER -F repo=$REPO -f query='
             query($owner: String!, $repo: String!) {
               repository(owner: $owner, name: $repo) {
@@ -129,7 +128,7 @@ jobs:
             pr_author=$(gh api repos/$OWNER/$REPO/pulls/$pr_number --jq '.user.login')
             
             # GitHub 사용자를 Discord 사용자로 매핑
-            discord_user=$(echo "$reviewer_map" | jq --arg user "$pr_author" -r '.[] | select(.github == $user) | .discord')
+            discord_user=$(echo "$REVIEWER_MAP" | jq --arg user "$pr_author" -r '.[] | select(.github == $user) | .discord')
             if [ -n "$discord_user" ]; then
               mentions+="$discord_user "
             fi
@@ -181,9 +180,9 @@ jobs:
             for reviewer in $incomplete_reviewers; do
               if [[ ! " ${reviewers_processed[@]} " =~ " ${reviewer} " ]]; then
                 reviewers_processed+=("$reviewer")
-                discord_user=$(echo "$reviewer_map" | jq --arg user "$reviewer" -r '.[] | select(.github == $user) | .discord')
+                discord_user=$(echo "$REVIEWER_MAP" | jq --arg user "$reviewer" -r '.[] | select(.github == $user) | .discord')
                 if [ -n "$discord_user" ]; then
-                  github_user=$(echo "$reviewer_map" | jq --arg user "$reviewer" -r '.[] | select(.github == $user) | .github')
+                  github_user=$(echo "$REVIEWER_MAP" | jq --arg user "$reviewer" -r '.[] | select(.github == $user) | .github')
                   pr_list=""
                   while read -r pr_item; do
                     pr_num=$(echo "$pr_item" | jq -r '.number')
