@@ -1,56 +1,66 @@
 version: '3.8'
 
 services:
-  backend:
+  neonadeuli-db:
+    container_name: neonadeuli-db
+    image: postgres:13
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=neonadeuli
+      - POSTGRES_USER=root
+      - POSTGRES_PASSWORD=1234
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U root -d neonadeuli"]
+      interval: 10s
+      timeout: 4s
+      retries: 5
+      start_period: 30s
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  neonadeuli-backend:
     build:
       context: .
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://user:password@db:5432/neonadeuli
+      - DATABASE_URL=postgresql://root:1234@neonadeuli-db:5432/neonadeuli
     volumes:
       - .:/app/backend
     depends_on:
-      - db
+      neonadeuli-db:
+        condition: service_healthy
 
+  # sonarqube:
+  #   image: sonarqube:latest
+  #   ports:
+  #     - "9000:9000"
+  #   environment:
+  #     - SONAR_JDBC_URL=jdbc:postgresql://sonarqube_db:5432/sonar
+  #     - SONAR_JDBC_USERNAME=sonar
+  #     - SONAR_JDBC_PASSWORD=sonar
+  #   volumes:
+  #     - sonarqube_data:/opt/sonarqube/data
+  #     - sonarqube_extensions:/opt/sonarqube/extensions
+  #     - sonarqube_logs:/opt/sonarqube/logs
+  #   depends_on:
+  #     - sonarqube_db
 
-  db:
-    image: postgres:13
-    environment:
-      - POSTGRES_DB=neonadeuli
-      - POSTGRES_USER=root
-      - POSTGRES_PASSWORD=1234
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-  sonarqube:
-    image: sonarqube:latest
-    ports:
-      - "9000:9000"
-    environment:
-      - SONAR_JDBC_URL=jdbc:postgresql://sonarqube_db:5432/sonar
-      - SONAR_JDBC_USERNAME=sonar
-      - SONAR_JDBC_PASSWORD=sonar
-    volumes:
-      - sonarqube_data:/opt/sonarqube/data
-      - sonarqube_extensions:/opt/sonarqube/extensions
-      - sonarqube_logs:/opt/sonarqube/logs
-    depends_on:
-      - sonarqube_db
-
-  sonarqube_db:
-    image: postgres:13
-    environment:
-      - POSTGRES_DB=sonar
-      - POSTGRES_USER=sonar
-      - POSTGRES_PASSWORD=sonar
-    volumes:
-      - sonarqube_db_data:/var/lib/postgresql/data
+  # sonarqube_db:
+  #   image: postgres:13
+  #   environment:
+  #     - POSTGRES_DB=sonar
+  #     - POSTGRES_USER=sonar
+  #     - POSTGRES_PASSWORD=sonar
+  #   volumes:
+  #     - sonarqube_db_data:/var/lib/postgresql/data
 
 volumes:
   postgres_data:
-  sonarqube_data:
-  sonarqube_extensions:
-  sonarqube_logs:
-  sonarqube_db_data:
+  # sonarqube_data:
+  # sonarqube_extensions:
+  # sonarqube_logs:
+  # sonarqube_db_data:
