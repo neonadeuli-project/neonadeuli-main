@@ -1,12 +1,13 @@
+from sqlalchemy import MetaData
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 
 from src.main.core.config import settings
 
-engine = create_async_engine(str(settings.SQLALCHEMY_DATABASE_URI), echo=True)
-
 Base = declarative_base()
+
+engine = create_async_engine(str(settings.SQLALCHEMY_DATABASE_URI), echo=True)
 
 AsyncSessionLocal = sessionmaker (
     autocommit=False,    # False인 경우 자동으로 트랜잭션 커밋 X   

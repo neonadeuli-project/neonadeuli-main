@@ -1,5 +1,3 @@
-from typing import Optional
-from fastapi import HTTPException, Header, status
 from src.main.db.database import AsyncSessionLocal
 
 async def get_db():
