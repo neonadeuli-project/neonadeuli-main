@@ -49,6 +49,7 @@ async def app_lifespan(app: FastAPI):
 
 
 def create_application() -> FastAPI:
+    setup_oauth()
     app = FastAPI(
         lifespan=app_lifespan,
         # 배포 시 swagger UI, Redoc 비활성화
@@ -60,7 +61,7 @@ def create_application() -> FastAPI:
     )
 
     app.add_exception_handler(BaseCustomException, custom_exception_handler)
-    app.add_event_handler("startup", setup_oauth)
+    # app.add_event_handler("startup", setup_oauth)
     app.add_middleware(SessionMiddleware, secret_key=settings.BACKEND_SESSION_SECRET_KEY)
     app.middleware("http")(auth_middleware)
 
