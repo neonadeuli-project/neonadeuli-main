@@ -8,12 +8,14 @@ from src.main.db.database import Base
     
 class User(Base):
     __tablename__ = 'users'
+
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String(255), unique=True, index=True, nullable=False)
     name = Column(String(100), nullable=False)
+    password = Column(String(255), nullable=True)
     profile_image = Column(String(255), nullable=True)
     is_active = Column(Boolean, default=True)
-    last_login = Column(DateTime(timezone=True), onupdate=func.now())
+    last_login = Column(DateTime(timezone=True), onupdate=func.now(), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # oauth_id = Column(String(255), unique=True, index=True, nullable=True)
