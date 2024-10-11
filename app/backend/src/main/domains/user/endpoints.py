@@ -1,5 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from asyncio.log import logger
+import secrets
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.main.db.deps import get_db
 from src.main.domains.user.models.user import User
 from src.main.core.auth.jwt import create_access_token
 from src.main.domains.user.services import UserService
@@ -22,7 +26,10 @@ async def social_login(
 ):
     try:
         social_login_class = SocialLoginFactory.get_social_login(provider)
-        return await social_login_class.get_authorization_url(request)
+        state = secrets.token_urlsafe()
+        request.session['oauth_state'] = state
+        print(f"Generated state: {state}") 
+        return await social_login_class.get_authorization_url(request, state)
     except ValueError:
         raise NotFoundError(f"지원하지 않는 제공자 : {provider}")
 
@@ -30,15 +37,21 @@ async def social_login(
 async def auth_callback(
     request: Request,
     provider: str,
-    user_service: UserService = Depends(get_user_service)
+    state: str = Query(...),
+    user_service: UserService = Depends(get_user_service),
+    db: AsyncSession = Depends(get_db)
 ):
     try:
+        stored_state = request.session.get('oauth_state')
+        if state != stored_state:
+            raise HTTPException(status_code=400, detail="Invalid state parameter")
+            
         social_login_class = SocialLoginFactory.get_social_login(provider)
         user_create = await social_login_class.get_user_info(request)
 
-        user = await user_service.get_or_create_user(user_create)
-        access_token = create_access_token(data={"sub": user.email})
+        user = await user_service.get_or_create_user(db, user_create)
 
+        access_token = create_access_token(data={"sub": user.email})
         return {"access_token": access_token, "token_type": "bearer"}
     
     except ValueError:

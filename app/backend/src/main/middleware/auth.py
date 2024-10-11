@@ -1,11 +1,8 @@
-from fastapi import Depends, HTTPException, Request
+from fastapi import HTTPException, Request
 from fastapi.security import HTTPBearer
 
 from src.main.core.auth.dependencies import get_current_user
-from src.main.core.auth.jwt import verify_token
 from src.main.db.deps import get_db
-from src.main.core.config import settings
-from src.main.domains.user.services import UserService
 
 
 security = HTTPBearer()

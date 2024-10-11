@@ -1,3 +1,4 @@
+from asyncio.log import logger
 from authlib.integrations.starlette_client import OAuth
 from src.main.core.config import settings
 
@@ -14,6 +15,8 @@ def setup_oauth():
         server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
         client_kwargs={'scope': 'openid email profile'}
     )
+
+    logger.info("Google OAuth 클라이언트가 성공적으로 등록되었습니다.")
 
     # 여기 다른 OAuth 제공자 설정 추가 가능
 
