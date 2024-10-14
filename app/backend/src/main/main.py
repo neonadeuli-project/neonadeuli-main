@@ -31,6 +31,7 @@ def custom_generate_unique_id(route: APIRoute) -> str:
 async def app_lifespan(app: FastAPI):
     logger.info("테이블 생성 프로세스 시작")
     # 애플리케이션 시작 시 실행될 로직
+    setup_oauth()
     async with engine.begin() as conn:
         # 모든 테이블 삭제
         # logger.info("테이블 삭제 중")
@@ -49,7 +50,6 @@ async def app_lifespan(app: FastAPI):
 
 
 def create_application() -> FastAPI:
-    setup_oauth()
     app = FastAPI(
         lifespan=app_lifespan,
         # 배포 시 swagger UI, Redoc 비활성화
