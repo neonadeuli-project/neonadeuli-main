@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from typing import Annotated, Any
 from dotenv import load_dotenv
@@ -32,6 +33,7 @@ class Settings(BaseSettings):
     # Info
     PROJECT_NAME : str
     API_V1_STR: str
+    LOG_DIR: str = os.path.join(os.path.dirname(os.path.abspath(__file__)))
     
     # Server
     BACKEND_CORS_ORIGINS: Annotated[
