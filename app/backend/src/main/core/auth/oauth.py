@@ -9,6 +9,7 @@ def setup_oauth():
     if not settings.GOOGLE_CLIENT_ID or not settings.GOOGLE_CLIENT_SECRET:
         raise ValueError("Google OAuth 자격 증명이 제대로 구성되지 않았습니다.")
     try:
+        # Google Oauth 설정
         oauth.register(
             name='google',
             client_id=settings.GOOGLE_CLIENT_ID,
@@ -16,6 +17,17 @@ def setup_oauth():
             server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
             client_kwargs={'scope': 'openid email profile'}
         )
+
+        # Naver Oauth 설정
+        oauth.register(
+            name='naver',
+            client_id=settings.NAVER_CLIENT_ID,
+            client_secret=settings.NAVER_CLIENT_SECRET,
+            authorize_url='https://nid.naver.com/oauth2.0/authorize',
+            access_token_url='https://nid.naver.com/oauth2.0/token',
+            api_base_url='https://openapi.naver.com/v1/nid/me'
+        )
+        
     except Exception as e:
         raise InternalServerError(f"OAuth 설정 중 오류 발생: {str(e)}")
 
