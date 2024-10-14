@@ -34,7 +34,7 @@ async def social_login(request: Request,provider: str):
     except Exception as e:
         raise InternalServerError(f"로그인 처리 중 오류 발생: {str(e)}")
 
-@router.get("/auth/{provider}/callback")
+@router.get("/auth/{provider}/callback", name="auth_callback")
 async def auth_callback(
     request: Request,
     provider: str,
