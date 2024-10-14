@@ -9,5 +9,7 @@ __all__ = [
     "UserCreate",
     "UserUpdate",
     "UserResponse",
-    "GoogleUserInfo"
+    "GoogleUserInfo",
+    "LoginResponse",
+    "AuthResponse"
 ]
