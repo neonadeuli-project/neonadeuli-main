@@ -15,9 +15,8 @@ class UserRepository:
         return result.scalar_one_or_none()
     
     
-    async def create_user(self, user_data: dict) -> User:
-        user = User(**user_data)
+    async def create_user(self, user_create: UserCreate) -> User:
+        user = User(**user_create.model_dump(exclude_unset=True))
         self.db.add(user)
-        await self.db.commit()
-        await self.db.refresh(user)
+        await self.db.flush()
         return user
