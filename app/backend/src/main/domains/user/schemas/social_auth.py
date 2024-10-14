@@ -1,7 +1,7 @@
 from pydantic import BaseModel, EmailStr, HttpUrl
 from .user import UserCreate
 
-class GoogleUserInfo(BaseModel):
+class BaseUserInfo(BaseModel):
     email: EmailStr
     name: str
     picture: HttpUrl | None = None
@@ -16,3 +16,15 @@ class GoogleUserInfo(BaseModel):
     
     class Config:
         from_attributes = True
+
+class GoogleUserInfo(BaseUserInfo): 
+    pass
+
+class NaverUserInfo(BaseUserInfo):
+    pass
+
+# 필요한 경우 각 제공자별로 추가적인 필드나 메서드를 정의
+# 예를 들어:
+# class KakaoUserInfo(BaseUserInfo):
+#     age_range: str | None = None
+#     gender: str | None = None
