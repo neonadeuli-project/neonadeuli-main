@@ -1,3 +1,4 @@
+from src.main.domains.user.auth.providers.naver import NaverLogin
 from src.main.core.auth.oauth import oauth
 from .providers.google import GoogleLogin
 
@@ -6,8 +7,8 @@ class SocialLoginFactory:
     def get_social_login(provider: str):
         if provider == 'google':
             return GoogleLogin(oauth.google)
-        # elif provider == 'naver':
-        #     return NaverLogin
+        elif provider == 'naver':
+            return NaverLogin(oauth.naver)
         # elif provider == 'kakao':
         #     return KakaoLogin
         else:
