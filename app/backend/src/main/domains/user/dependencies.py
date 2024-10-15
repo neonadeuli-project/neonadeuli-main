@@ -1,6 +1,6 @@
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from .services import UserService
+from .service.user_service import UserService
 from .repositories import UserRepository
 from src.main.db.deps import get_db
 

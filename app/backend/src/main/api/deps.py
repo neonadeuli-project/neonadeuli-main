@@ -5,7 +5,7 @@ from jose import jwt, JWTError
 
 from src.main.core.config import settings
 from src.main.db.deps import get_db
-from src.main.domains.user.services import UserService
+from src.main.domains.user.service.user_service import UserService
 from src.main.domains.user.models.user import User
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
