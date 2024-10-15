@@ -20,7 +20,22 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  neonadeuli-redis:
+    container_name: neonadeuli-redis
+    image: redis:latest
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   neonadeuli-backend:
+    container_name: neonadeuli-backend
     build:
       context: .
       dockerfile: Dockerfile
@@ -32,6 +47,8 @@ services:
       - .:/app/backend
     depends_on:
       neonadeuli-db:
+        condition: service_healthy
+      neonadeuli-redis:
         condition: service_healthy
 
   # sonarqube:
@@ -60,6 +77,7 @@ services:
 
 volumes:
   postgres_data:
+  redis_data:
   # sonarqube_data:
   # sonarqube_extensions:
   # sonarqube_logs:
