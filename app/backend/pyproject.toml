@@ -1,8 +1,15 @@
 [tool.poetry]
 name = "너나들이"
+packages = [
+    { include = "neonadeuli", from = "src" },
 version = "0.3.3"
 description = "대화형 챗봇 AI와 다양한 콘텐츠로 한국의 국가 유산과 역사를 재미있게 탐구하는 문화 콘텐츠 서비스"
-authors = ["정종현 <jjh3543@naver.com>", "김강현 <hw813@naver.com>"]
+authors = ["정종현 <jjh3543@naver.com>"]
+
+[tool.pytest.ini_options]
+pythonpath = [
+  "src"
+]
 
 [tool.poetry.dependencies]
 python = "^3.12"
