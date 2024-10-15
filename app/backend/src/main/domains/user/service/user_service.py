@@ -5,6 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from pydantic import ValidationError as PydanticValidationError
 
+from src.main.core.exceptions import NotFoundError
+from src.main.domains.user.models.user import User
 from src.main.core.auth.password import hash_password
 from src.main.domains.user.schemas.user import UserResponse
 from src.main.domains.user.schemas.user import UserCreate
@@ -14,6 +16,13 @@ class UserService:
     def __init__(self, db: AsyncSession):
         self.db = db
         self.user_repository = UserRepository(db)
+
+    async def get_user_by_id(self, user_id: int) -> User:
+        user = await self.user_repository.get_by_id(user_id)
+        if not user:
+            raise NotFoundError(f"ID가 {user_id}인 사용자를 찾을 수 없습니다")
+        
+        return user
 
     async def get_or_create_user(self, user_create: UserCreate) -> UserResponse:
             async with self.db.begin():
@@ -40,3 +49,4 @@ class UserService:
         if user_data.get('profile_image'):
             user_data['profile_image'] = str(user_data['profile_image'])
         return user_data
+    
