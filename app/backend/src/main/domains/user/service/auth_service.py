@@ -32,7 +32,8 @@ class AuthService:
         social_login_class = SocialLoginFactory.get_social_login(provider)
         state = secrets.token_urlsafe()
         request.session['oauth_state'] = state
-        print(f"Generated state: {state}") 
+        logging.debug(f"생성된 state 값: {state}") 
+        logging.debug(f"state 저장 이후 세션 값: {request.session}")
         return await social_login_class.get_authorization_url(request, state)
     
     async def handle_oauth_callback(self, request: Request, provider: str, state: str) -> AuthResponse:

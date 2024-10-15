@@ -1,5 +1,5 @@
 from fastapi import Depends, HTTPException, status
-from jose import JWTError
+from jose import JWTError, jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi.security import OAuth2PasswordBearer
 
@@ -10,7 +10,6 @@ from src.main.domains.user.service.user_service import UserService
 
 from src.main.domains.user.repository.token_repository import TokenRepository
 from src.main.core.config import settings
-from src.main.core.auth import jwt
 
 from src.main.db.deps import get_db
 
@@ -24,7 +23,7 @@ async def get_current_user(
 ) -> User:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        details="자격 증명을 검증할 수 없습니다.",
+        detail="자격 증명을 검증할 수 없습니다.",
         headers={"WWW-Authenticate":"Bearer"},
     )
 
@@ -37,7 +36,7 @@ async def get_current_user(
     
     try:
         payload = jwt.decode(
-            token, settings.SECRET_KEY, algorithm=[settings.ALGORITHM]
+            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
         )
         user_id: str = payload.get("sub")
         if user_id is None:
