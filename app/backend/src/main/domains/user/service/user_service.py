@@ -1,5 +1,5 @@
 from asyncio.log import logger
-from fastapi import Depends, HTTPException
+from fastapi import HTTPException
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
