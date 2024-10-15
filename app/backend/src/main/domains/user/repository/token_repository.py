@@ -1,7 +1,6 @@
 from redis import Redis
-from src.main.db.database import redis_client
 
-class RedisTokenManager:
+class TokenRepository:
     def __init__(self, redis_client: Redis):
         self.redis_client = redis_client
 

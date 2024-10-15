@@ -11,10 +11,10 @@ class UserRepository:
         self.db = db
 
     async def get_by_id(self, user_id: int) -> User | None:
-        result = await self.db.execute(select(User).filter(User.id == user_id))
+        result = await self.db.execute(select(User).where(User.id == user_id))
         return result.scalar_one_or_none()
     
-    async def get_user_by_email(self, email: str) -> User | None:
+    async def get_by_email(self, email: str) -> User | None:
         result = await self.db.execute(select(User).where(User.email == email))
         return result.scalar_one_or_none()
     
@@ -23,4 +23,10 @@ class UserRepository:
         user = User(**user_create.model_dump(exclude_unset=True))
         self.db.add(user)
         await self.db.flush()
+        return user
+    
+    async def get_or_create_user(self, user_create: UserCreate) -> User:
+        user = await self.get_by_email(user_create.email)
+        if not user:
+            user = await self.create_user(user_create)
         return user
