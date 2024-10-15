@@ -10,7 +10,7 @@ from src.main.domains.user.models.user import User
 from src.main.core.auth.password import hash_password
 from src.main.domains.user.schemas.user import UserResponse
 from src.main.domains.user.schemas.user import UserCreate
-from src.main.domains.user.repositories import UserRepository
+from src.main.domains.user.repository.user_repository import UserRepository
 
 class UserService:
     def __init__(self, db: AsyncSession):
@@ -25,22 +25,22 @@ class UserService:
         return user
 
     async def get_or_create_user(self, user_create: UserCreate) -> UserResponse:
-            async with self.db.begin():
-                try:
-                    prepared_data = self._prepare_user_data(user_create)
-                    user = await self.user_repository.get_user_by_email(prepared_data['email'])
-                    if not user:
-                        user = await self.user_repository.create_user(prepared_data)
-                    return UserResponse.from_orm(user)
-                except SQLAlchemyError as e:
-                    logger.error(f"Database error: {str(e)}")
-                    raise HTTPException(status_code=500, detail="데이터베이스 오류가 발생했습니다.")
-                except PydanticValidationError as e:
-                    logger.error(f"Data validation error: {str(e)}")
-                    raise HTTPException(status_code=422, detail="데이터 검증 오류가 발생했습니다.")
-                except Exception as e:
-                    logger.exception(f"Unexpected error: {str(e)}")
-                    raise HTTPException(status_code=500, detail=f"예기치 않은 오류가 발생했습니다: {str(e)}")
+        async with self.db.begin():
+            try:
+                prepared_data = self._prepare_user_data(user_create)
+                user = await self.user_repository.get_by_email(prepared_data['email'])
+                if not user:
+                    user = await self.user_repository.create_user(prepared_data)
+                return UserResponse.from_orm(user)
+            except SQLAlchemyError as e:
+                logger.error(f"Database error: {str(e)}")
+                raise HTTPException(status_code=500, detail="데이터베이스 오류가 발생했습니다.")
+            except PydanticValidationError as e:
+                logger.error(f"Data validation error: {str(e)}")
+                raise HTTPException(status_code=422, detail="데이터 검증 오류가 발생했습니다.")
+            except Exception as e:
+                logger.exception(f"Unexpected error: {str(e)}")
+                raise HTTPException(status_code=500, detail=f"예기치 않은 오류가 발생했습니다: {str(e)}")
     
     def _prepare_user_data(self, user_create: UserCreate) -> dict:
         user_data = user_create.model_dump(exclude_unset=True)
