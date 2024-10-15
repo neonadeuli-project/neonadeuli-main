@@ -7,21 +7,30 @@ class LoginResponse(BaseModel):
     message: str
     user: UserResponse
 
+class TokenResponse(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str
+
 class AuthResponse(BaseModel):
     content: LoginResponse
-    access_token: str
+    tokens: TokenResponse
 
     class Config:
         arbitrary_types_allowed = True
 
     @classmethod
-    def create(cls, user: UserResponse, access_token: str) -> 'AuthResponse':
+    def create(cls, user: UserResponse, access_token: str, refresh_token: str) -> 'AuthResponse':
         return cls(
             content=LoginResponse(
                 message="로그인 성공",
                 user=user
             ),
-            access_token=access_token
+            tokens=TokenResponse(
+                access_token=access_token,
+                refresh_token=refresh_token,
+                token_type="bearer"
+            )
         )
 
     def to_response(self):
@@ -38,3 +47,16 @@ class AuthResponse(BaseModel):
         )
 
         return response
+    
+class RefreshTokenResponse(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str
+
+    @classmethod
+    def create(cls, access_token: str, refresh_token: str) -> 'RefreshTokenResponse':
+        return cls(
+            access_token=access_token,
+            refresh_token=refresh_token,
+            token_type="bearer"
+        )
