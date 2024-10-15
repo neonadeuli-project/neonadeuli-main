@@ -1,5 +1,6 @@
-from datetime import timedelta
 import secrets
+import logging
+
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import JSONResponse
 
@@ -14,6 +15,7 @@ from src.main.core.auth.jwt import (
     create_refresh_token, 
     verify_token
 )
+
 from src.main.domains.user.service.user_service import UserService
 from src.main.core.exceptions import (
     AuthenticationError,
@@ -27,6 +29,8 @@ from src.main.api.deps import get_current_user
 from .dependencies import get_auth_service, get_user_service
 
 router = APIRouter()
+
+logging.basicConfig(level=logging.DEBUG)
 
 @router.get("/login/{provider}")
 async def social_login(request: Request,provider: str):
@@ -50,7 +54,9 @@ async def auth_callback(
     user_service: UserService = Depends(get_user_service)
 ):
     try:
+        logging.debug(f"전달받은 state 값: {state}")
         stored_state = request.session.get('oauth_state')
+        logging.debug(f"세션에 저장된 state 값: {stored_state}")
         if state != stored_state:
             raise ValidationError("유효하지 않은 State 파라미터입니다.")
             

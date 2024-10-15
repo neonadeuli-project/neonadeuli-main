@@ -10,10 +10,10 @@ from fastapi import FastAPI
 from fastapi.routing import APIRoute
 from contextlib import asynccontextmanager
 
-from middleware.auth import auth_middleware
 from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
+from src.main.middleware.auth import auth_middleware
 from src.main.core.auth.oauth import setup_oauth
 from src.main.db.database import Base, engine
 from src.main.core.config import settings
@@ -91,3 +91,7 @@ def create_application() -> FastAPI:
 
 
 app = create_application()
+
+if __name__ == '__main__':
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
