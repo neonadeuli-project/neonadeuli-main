@@ -2,6 +2,8 @@ import sys
 import os
 import logging
 
+import redis
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from fastapi import FastAPI
@@ -16,6 +18,7 @@ from src.main.core.auth.oauth import setup_oauth
 from src.main.db.database import Base, engine
 from src.main.core.config import settings
 from src.main.api.v1.api import api_router
+from src.main.db.database import redis_client
 from src.main.core.exceptions import BaseCustomException, custom_exception_handler
 
 logging.basicConfig(level=logging.INFO)
@@ -29,9 +32,15 @@ def custom_generate_unique_id(route: APIRoute) -> str:
 
 @asynccontextmanager
 async def app_lifespan(app: FastAPI):
-    logger.info("테이블 생성 프로세스 시작")
-    # 애플리케이션 시작 시 실행될 로직
+    logger.info("애플리케이션 시작 프로세스 시작")
     setup_oauth()
+    # Redis 연결 확인
+    try:
+        redis_client.ping()
+        logger.info("Redis 서버 연결 성공")
+    except redis.exceptions.ConnectionError as e:
+        logger.error(f"Redis 서버 연결 실패: {e}")
+
     async with engine.begin() as conn:
         # 모든 테이블 삭제
         # logger.info("테이블 삭제 중")
@@ -44,7 +53,7 @@ async def app_lifespan(app: FastAPI):
         tables = Base.metadata.tables
         logger.info(f"생성된 테이블: {', '.join(tables.keys())}")
         
-    logger.info("테이블 생성 완료")
+    logger.info("애플리케이션 시작 프로세스 완료")
     yield
     # 애플리케이션 종료 시 실행될 로직 (필요한 경우)
 
@@ -61,7 +70,6 @@ def create_application() -> FastAPI:
     )
 
     app.add_exception_handler(BaseCustomException, custom_exception_handler)
-    # app.add_event_handler("startup", setup_oauth)
     app.add_middleware(SessionMiddleware, secret_key=settings.BACKEND_SESSION_SECRET_KEY)
     app.middleware("http")(auth_middleware)
 

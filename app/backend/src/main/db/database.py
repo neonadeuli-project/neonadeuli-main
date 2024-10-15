@@ -1,3 +1,4 @@
+import redis
 from sqlalchemy import MetaData
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
@@ -15,4 +16,11 @@ AsyncSessionLocal = sessionmaker (
     bind=engine,
     class_=AsyncSession,
     expire_on_commit=False
+)
+
+redis_client = redis.Redis(
+    host=settings.REDIS_HOST,
+    port=settings.REDIS_PORT,
+    decode_responses=True,
+    db=0
 )
