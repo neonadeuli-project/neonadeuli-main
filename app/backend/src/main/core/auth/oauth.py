@@ -27,6 +27,16 @@ def setup_oauth():
             access_token_url='https://nid.naver.com/oauth2.0/token',
             api_base_url='https://openapi.naver.com/v1/nid/me'
         )
+
+        # Kakao Oauth 설정
+        oauth.register(
+            name='kakao',
+            client_id=settings.KAKAO_REST_API_KEY,
+            client_secret=settings.KAKAO_CLIENT_SECRET,
+            authorize_url='https://kauth.kakao.com/oauth/authorize',
+            access_token_url='https://kauth.kakao.com/oauth/token',
+            api_base_url='https://kapi.kakao.com/v2/user/me'
+        )
         
     except Exception as e:
         raise InternalServerError(f"OAuth 설정 중 오류 발생: {str(e)}")
