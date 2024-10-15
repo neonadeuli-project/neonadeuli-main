@@ -1,12 +1,20 @@
+from datetime import timedelta
 import secrets
 from fastapi import APIRouter, Depends, Query, Request
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import JSONResponse
 
+from src.main.domains.user.service import auth_service
 from src.main.domains.user.schemas.user.user_response import UserResponse
-from src.main.domains.user.schemas.auth import AuthResponse
+from src.main.domains.user.schemas.auth import AuthResponse, RefreshTokenResponse
 from src.main.domains.user.models.user import User
-from src.main.core.auth.jwt import create_access_token
-from src.main.domains.user.services import UserService
+from src.main.core.auth.dependencies import oauth2_scheme
+from src.main.core.config import settings
+from src.main.core.auth.jwt import (
+    create_access_token, 
+    create_refresh_token, 
+    verify_token
+)
+from src.main.domains.user.service.user_service import UserService
 from src.main.core.exceptions import (
     AuthenticationError,
     InternalServerError, 
@@ -16,7 +24,7 @@ from src.main.core.exceptions import (
 from src.main.domains.user.auth.factory import SocialLoginFactory
 from src.main.api.deps import get_current_user
 
-from .dependencies import get_user_service
+from .dependencies import get_auth_service, get_user_service
 
 router = APIRouter()
 
@@ -64,9 +72,19 @@ async def auth_callback(
         raise InternalServerError(f"인증 콜백 처리 중 오류 발생: {str(e)}")
 
 @router.get("/token/refresh")
-async def refresh_token(refresh_token: str):
-    # TODO: Token 갱신 로직 구현
-    raise NotImplementedError("Token 갱신 기능이 아직 구현되지 않았습니다.")
+async def refresh_token(
+    refresh_token: str = Depends(oauth2_scheme), 
+    auth_service: auth_service.AuthService = Depends(get_auth_service)
+):
+    try:
+        tokens = await auth_service.refresh_token(refresh_token)
+        return RefreshTokenResponse(**tokens)
+    except AuthenticationError as e:
+        raise AuthenticationError(str(e))
+    except NotFoundError as e:
+        raise NotFoundError(str(e))
+    except Exception as e:
+        raise InternalServerError(f"예상치 못한 에러 발생: {str(e)}")
 
 @router.post("/logout")
 async def logout(current_user: User = Depends(get_current_user)):
