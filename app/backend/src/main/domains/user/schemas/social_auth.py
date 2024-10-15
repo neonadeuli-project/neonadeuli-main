@@ -23,6 +23,9 @@ class GoogleUserInfo(BaseUserInfo):
 class NaverUserInfo(BaseUserInfo):
     pass
 
+class KakaoUserInfo(BaseUserInfo):
+    pass
+
 # 필요한 경우 각 제공자별로 추가적인 필드나 메서드를 정의
 # 예를 들어:
 # class KakaoUserInfo(BaseUserInfo):
