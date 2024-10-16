@@ -2,6 +2,7 @@ import sys
 import os
 import logging
 
+from fastapi.staticfiles import StaticFiles
 import redis
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -38,9 +39,13 @@ async def app_lifespan(app: FastAPI):
     try:
         redis_client.ping()
         logger.info("Redis 서버 연결 성공")
+
+        # Redis 리셋
+        # redis_client.flushall()
+        # logger.info("Redis 리셋 완료")
     except redis.exceptions.ConnectionError as e:
         logger.error(f"Redis 서버 연결 실패: {e}")
-
+    
     async with engine.begin() as conn:
         # 모든 테이블 삭제
         # logger.info("테이블 삭제 중")
@@ -70,7 +75,14 @@ def create_application() -> FastAPI:
     )
 
     app.add_exception_handler(BaseCustomException, custom_exception_handler)
-    app.add_middleware(SessionMiddleware, secret_key=settings.BACKEND_SESSION_SECRET_KEY)
+    app.add_middleware(
+        SessionMiddleware, 
+        secret_key=settings.BACKEND_SESSION_SECRET_KEY,
+        same_site="lax",
+        # secure=True, 
+        https_only=False,
+        max_age=3600 # 세션 유효기간
+    )
     app.middleware("http")(auth_middleware)
 
     # Set All CORS enabled origins
@@ -86,6 +98,9 @@ def create_application() -> FastAPI:
         )
 
     app.include_router(api_router, prefix=settings.API_V1_STR)
+
+    # 정적 파일 서빙
+    app.mount("/", StaticFiles(directory="/Users/jonghyunjung/VisualStudioProjects/neonadeuli/app/backend/src/test/social-login-test/build", html=True), name="static")
 
     return app
 

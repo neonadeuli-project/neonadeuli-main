@@ -1,107 +1,78 @@
-import React, { useState, useEffect } from 'react';
+// Updated front-end and back-end code to use cookies instead of local storage for storing tokens.
+
+// FRONT-END (React Code Update)
+import React, { useState, useEffect, useCallback } from 'react';
+import { BrowserRouter as Router, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 
 const API_BASE_URL = 'http://localhost:8000/api/v1';
 
 const App = () => {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/auth/:provider/callback" element={<OAuthCallback />} />
+        <Route path="/" element={<Home />} />
+      </Routes>
+    </Router>
+  );
+};
+
+const Home = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState(null);
   const [error, setError] = useState(null);
   const [message, setMessage] = useState(null);
 
-  useEffect(() => {
-    const accessToken = localStorage.getItem('accessToken');
-    if (accessToken) {
-      setIsLoggedIn(true);
-      fetchUserInfo(accessToken);
-    }
-  }, []);
-
-  const fetchUserInfo = async (token) => {
+  const fetchUserInfo = useCallback(async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/users/info`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        credentials: 'include', // Include cookies in the request
       });
       if (response.ok) {
         const userData = await response.json();
         setUser(userData);
+        setIsLoggedIn(true);
       } else {
         throw new Error('사용자 정보를 가져오는데 실패했습니다.');
       }
     } catch (error) {
       setError(error.message);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchUserInfo();
+  }, [fetchUserInfo]);
 
   const handleSocialLogin = async (provider) => {
     try {
       const response = await fetch(`${API_BASE_URL}/users/login/${provider}`);
       const data = await response.json();
-      window.location.href = data.auth_url;
-    } catch (error) {
-      setError('로그인 초기화 중 오류가 발생했습니다.');
-    }
-  };
-
-  const handleTokenRefresh = async () => {
-    try {
-      const refreshToken = localStorage.getItem('refreshToken');
-      const response = await fetch(`${API_BASE_URL}/users/token/refresh`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${refreshToken}`
-        }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        localStorage.setItem('accessToken', data.access_token);
-        localStorage.setItem('refreshToken', data.refresh_token);
-        setMessage('토큰이 성공적으로 갱신되었습니다.');
-        fetchUserInfo(data.access_token);
+      if (data.auth_url && data.state) {
+        window.location.href = data.auth_url;
       } else {
-        throw new Error('토큰 갱신에 실패했습니다.');
+        throw new Error('인증 URL 또는 상태 토큰이 제공되지 않았습니다.');
       }
     } catch (error) {
-      setError(error.message);
+      console.error('로그인 초기화 중 오류 발생:', error);
+      setError(error.message || '로그인 프로세스 중 오류가 발생했습니다.');
     }
   };
 
   const handleLogout = async () => {
     try {
-      const accessToken = localStorage.getItem('accessToken');
       const response = await fetch(`${API_BASE_URL}/users/logout`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`
-        }
+        credentials: 'include', // Include cookies in the request
       });
-      if (response.ok) {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        setIsLoggedIn(false);
-        setUser(null);
-        setMessage('로그아웃되었습니다.');
-      } else {
-        throw new Error('로그아웃 처리 중 오류가 발생했습니다.');
-      }
+      if (!response.ok) throw new Error('로그아웃 처리 중 오류가 발생했습니다.');
+      setIsLoggedIn(false);
+      setUser(null);
+      setMessage('로그아웃되었습니다.');
     } catch (error) {
       setError(error.message);
     }
   };
-
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const accessToken = urlParams.get('access_token');
-    const refreshToken = urlParams.get('refresh_token');
-    if (accessToken && refreshToken) {
-      localStorage.setItem('accessToken', accessToken);
-      localStorage.setItem('refreshToken', refreshToken);
-      setIsLoggedIn(true);
-      fetchUserInfo(accessToken);
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-  }, []);
 
   return (
     <div className="container mx-auto p-4">
@@ -138,9 +109,6 @@ const App = () => {
               <p><strong>이메일:</strong> {user.email}</p>
             </div>
           )}
-          <button onClick={handleTokenRefresh} className="bg-blue-500 text-white px-4 py-2 rounded">
-            토큰 갱신
-          </button>
           <button onClick={handleLogout} className="bg-gray-500 text-white px-4 py-2 rounded">
             로그아웃
           </button>
@@ -148,6 +116,41 @@ const App = () => {
       )}
     </div>
   );
+};
+
+const OAuthCallback = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const handleOAuthCallback = async () => {
+      const urlParams = new URLSearchParams(location.search);
+      const code = urlParams.get('code');
+      const state = urlParams.get('state');
+      const provider = localStorage.getItem('oauthProvider');
+
+      if (!code || !state || !provider) {
+        console.error('Missing OAuth parameters in callback.');
+        navigate('/', { state: { error: 'Invalid OAuth callback parameters.' } });
+        return;
+      }
+
+      try {
+        const url = `${API_BASE_URL}/users/auth/${provider}/callback?state=${state}&code=${code}`;
+        const response = await fetch(url, { credentials: 'include' });
+        if (!response.ok) throw new Error('Failed to complete OAuth process.');
+        navigate('/', { state: { message: 'Login successful.' } });
+      } catch (error) {
+        console.error('Error in handleOAuthCallback:', error);
+        navigate('/', { state: { error: error.message } });
+      } finally {
+        localStorage.removeItem('oauthProvider');
+      }
+    };
+    handleOAuthCallback();
+  }, [location, navigate]);
+
+  return <div>Processing login...</div>;
 };
 
 export default App;
