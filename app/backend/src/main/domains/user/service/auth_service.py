@@ -1,8 +1,11 @@
-import secrets
 import logging
+import secrets
 
 from datetime import timedelta
-from fastapi import Request
+from asyncio.log import logger
+from fastapi import HTTPException, Request
+from fastapi.responses import JSONResponse
+from jose import JWTError
 
 from src.main.domains.user.schemas.user.user_response import UserResponse
 from src.main.domains.user.auth.factory import SocialLoginFactory
@@ -10,9 +13,9 @@ from src.main.domains.user.repository.token_repository import TokenRepository
 from src.main.domains.user.repository.user_repository import UserRepository
 from src.main.domains.user.schemas.auth import AuthResponse, RefreshTokenResponse
 from src.main.core.exceptions import (
-    AuthenticationError, 
-    NotFoundError, 
-    ValidationError
+    AuthenticationError,
+    InternalServerError, 
+    NotFoundError
 )
 from src.main.core.config import settings
 from src.main.core.auth.jwt import (
@@ -21,7 +24,7 @@ from src.main.core.auth.jwt import (
     verify_token
 )
 
-logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 class AuthService:
     def __init__(self, user_repository: UserRepository, token_repository: TokenRepository):
@@ -29,62 +32,109 @@ class AuthService:
         self.token_repository = token_repository
 
     async def initialize_social_login(self, request: Request, provider: str) -> str:
-        social_login_class = SocialLoginFactory.get_social_login(provider)
-        state = secrets.token_urlsafe()
-        request.session['oauth_state'] = state
-        logging.debug(f"생성된 state 값: {state}") 
-        logging.debug(f"state 저장 이후 세션 값: {request.session}")
-        return await social_login_class.get_authorization_url(request, state)
-    
-    async def handle_oauth_callback(self, request: Request, provider: str, state: str) -> AuthResponse:
-        logging.debug(f"전달받은 state 값: {state}")
-        stored_state = request.session.get('oauth_state')
-        logging.debug(f"세션에 저장된 state 값: {stored_state}")
-        if state != stored_state:
-            raise ValidationError("유효하지 않은 State 파라미터입니다.")
-            
-        social_login_class = SocialLoginFactory.get_social_login(provider)
-        user_create = await social_login_class.get_user_info(request)
-        
-        user = await self.user_repository.get_or_create_user(user_create)
-        access_token = create_access_token(data={"sub": user.email})
+        try:
+            state = secrets.token_urlsafe(32)
+            social_login_class = SocialLoginFactory.get_social_login(provider)
+            auth_url = await social_login_class.get_authorization_url(request, state)
 
-        return AuthResponse.create(UserResponse.from_orm(user), access_token)
+            self.token_repository.store_oauth_state(state, provider, 300)
+
+            return {
+                "auth_url": auth_url,
+                "state": state
+            }
+        except Exception as e:
+            logger.exception(f"소셜 로그인 초기화 중 오류 발생: {str(e)}")
+            raise InternalServerError(f"소셜 로그인 초기화 중 오류 발생: {str(e)}")
+    
+    async def handle_oauth_callback(self, request: Request, provider: str) -> JSONResponse:
+        state = request.query_params.get('state')
+        if not state:
+            raise HTTPException(status_code=400, detail="State parameter is missing")
+
+        # Redis에서 상태 검증
+        stored_provider = self.token_repository.get_oauth_state(state)
+        if not stored_provider or stored_provider != provider:
+            raise HTTPException(status_code=400, detail="Invalid state parameter")
+        try:
+            social_login_class = SocialLoginFactory.get_social_login(provider)
+            user_create = await social_login_class.get_user_info(request)
+            logger.debug(f"생성된 UserCreate 객체: {user_create}")
+            
+            user = await self.user_repository.get_or_create_user(user_create)
+
+            access_token = create_access_token(data={"sub": user.email})
+            refresh_token = create_refresh_token(data={"sub": str(user.id)})
+
+            logger.info(f"Generated tokens - Access: {access_token[:10]}..., Refresh: {refresh_token[:10]}...")
+
+            # Refresh token 저장
+            self.token_repository.store_refresh_token(
+                str(user.id),
+                refresh_token,
+                settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
+            )
+
+            # 사용된 OAuth 상태 삭제
+            self.token_repository.delete_oauth_state(state)
+
+            # Set cookies for access and refresh tokens
+            response = JSONResponse(content={"message": "로그인 성공", "user": UserResponse.from_orm(user).dict()})
+            response.set_cookie(key="access_token", value=access_token, httponly=True)
+            response.set_cookie(key="refresh_token", value=refresh_token, httponly=True)
+
+            return response
+
+        except AuthenticationError as e:
+            logger.exception(f"인증 오류: {str(e)}")
+            raise
+        except Exception as e:
+            logger.exception(f"사용자 정보 획득 중 예상치 못한 오류: {str(e)}")
+            raise AuthenticationError(f"사용자 정보 획득 중 오류 발생: {str(e)}")
+
 
     async def refresh_token(self, refresh_token: str) -> dict:
         try:
+            # refresh token 검증
             payload = verify_token(refresh_token)
-            user_id = payload.get("sub")
-            if user_id is None:
-                raise AuthenticationError("유효하지 않은 Refresh Token입니다.")
-            
-            stored_token = TokenRepository.get_refresh_token(user_id)
-            if stored_token != refresh_token:
-                raise AuthenticationError("Refresh Token이 유효하지 않거나 만료되었습니다.")
-            
-            user = self.user_repository.get_by_id(user_id)
-            if user is None:
-                raise NotFoundError("유저를 찾을 수 없습니다.")
-            
-            # 새 access token 생성
-            access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-            access_token = create_access_token(data={"sub":user.id}, expires_delta=access_token_expires)
+            user_email = payload.get("sub")
+        except JWTError:
+            raise AuthenticationError("유효하지 않은 리프레시 토큰입니다.")
+        
+        # 사용자 조회
+        user = self.user_repository.get_by_email(user_email)
+        if not user:
+            raise NotFoundError("유저를 찾을 수 없습니다.")
+        
+        # 저장된 refresh token 검증
+        stored_token = self.token_repository.get_refresh_token(str(user.id))
+        if stored_token != refresh_token:
+            raise AuthenticationError("Refresh Token이 일치하지 않습니다.")
+        
+        # 새 access token 생성
+        new_access_token = create_access_token(
+            data={"sub": user.email},
+            expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        )
 
-            # 새 refresh token 생성
-            refresh_token_expires = timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
-            new_refresh_token = create_refresh_token(data={"sub":user.id}, expires_delta=refresh_token_expires)
+        # 새 refresh token 생성
+        new_refresh_token = create_refresh_token(
+            data={"sub": user.email},
+            expires_delta=timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+        )
 
-            self.token_repository.store_refresh_token(user.id, new_refresh_token, settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60)
-            self.token_repository.blacklist_token(refresh_token)
+        # 새 Refresh 토큰 저장 및 이전 토큰 블랙리스트 처리
+        self.token_repository.store_refresh_token(
+            str(user.id), 
+            new_refresh_token, 
+            settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
+        )
+        self.token_repository.blacklist_token(refresh_token)
 
-            return RefreshTokenResponse(
-                access_token=access_token,
-                refresh_token=new_refresh_token
-            )
-        except (AuthenticationError, NotFoundError) as e:
-            raise e
-        except Exception as e:
-            raise AuthenticationError(f"자격 증명을 검증할 수 없습니다.")
+        return RefreshTokenResponse(
+            access_token=new_access_token,
+            refresh_token=new_refresh_token
+        )
     
     async def logout(self, user_id: int, token: str):
         await self.token_repository.blacklist_token(token)
