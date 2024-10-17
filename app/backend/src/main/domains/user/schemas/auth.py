@@ -1,52 +1,33 @@
+from typing import Any, Dict
 from pydantic import BaseModel
-
+from fastapi.responses import JSONResponse
 from .user import UserResponse
+from src.main.core.config import settings
 
 
 class LoginResponse(BaseModel):
     message: str
     user: UserResponse
 
-class TokenResponse(BaseModel):
-    access_token: str
-    refresh_token: str
-    token_type: str
-
 class AuthResponse(BaseModel):
-    content: LoginResponse
-    tokens: TokenResponse
+    user: UserResponse
+    message: str = "로그인 성공"
 
     class Config:
         arbitrary_types_allowed = True
 
     @classmethod
-    def create(cls, user: UserResponse, access_token: str, refresh_token: str) -> 'AuthResponse':
+    def create(cls, user: UserResponse):
         return cls(
-            content=LoginResponse(
-                message="로그인 성공",
-                user=user
-            ),
-            tokens=TokenResponse(
-                access_token=access_token,
-                refresh_token=refresh_token,
-                token_type="bearer"
-            )
+            user=user,
+            message="로그인 성공"
         )
 
-    def to_response(self):
-        from fastapi.responses import JSONResponse
-
-        response = JSONResponse(content=self.content.model_dump())
-        response.set_cookie(
-            key="access_token",
-            value=f"Bearer {self.access_token}",
-            httponly=True,
-            secure=True,
-            samesite="lax",
-            max_age=3600
-        )
-
-        return response
+    def model_dump(self, **kwargs) -> Dict[str, Any]:
+        return {
+            "message": self.message,
+            "user": self.user.model_dump()
+        }
     
 class RefreshTokenResponse(BaseModel):
     access_token: str
