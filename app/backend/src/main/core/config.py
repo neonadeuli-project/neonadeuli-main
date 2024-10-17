@@ -48,6 +48,7 @@ class Settings(BaseSettings):
     SQLALCHEMY_DATABASE_URI: str
     REDIS_HOST: str
     REDIS_PORT: int
+    REDIS_PWD: str
 
     # Oauth2.0
     GOOGLE_CLIENT_ID: str
@@ -56,6 +57,7 @@ class Settings(BaseSettings):
     NAVER_CLIENT_SECRET: str
     KAKAO_REST_API_KEY: str
     KAKAO_CLIENT_SECRET: str
+    OAUTH_STATE_EXPIRE_SECONDS: int
 
     # Token
     SECRET_KEY: str
