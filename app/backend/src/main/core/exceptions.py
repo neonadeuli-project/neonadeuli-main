@@ -1,4 +1,4 @@
-from fastapi import HTTPException, Request
+from fastapi import Request
 from fastapi.responses import JSONResponse
 
 class BaseCustomException(Exception):
@@ -17,6 +17,9 @@ class AuthenticationError(BaseCustomException):
 class AuthorizationError(BaseCustomException):
     pass
 
+class InternalServerError(BaseCustomException):
+    pass
+
 # 전역 예외 처리기
 async def custom_exception_handler(request: Request, exc: BaseCustomException):
     if isinstance(exc, NotFoundError):
@@ -27,5 +30,7 @@ async def custom_exception_handler(request: Request, exc: BaseCustomException):
         return JSONResponse(status_code=401, content={"message": exc.message})
     elif isinstance(exc, AuthorizationError):
         return JSONResponse(status_code=403, content={"message": exc.message})
+    elif isinstance(exc, InternalServerError):
+        return JSONResponse(status_code=500, content={"message": exc.message})
     else:
         return JSONResponse(status_code=500, content={"message": "Internal server error"})

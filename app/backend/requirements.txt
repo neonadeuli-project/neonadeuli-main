@@ -25,4 +25,8 @@ flake8-comprehensions
 flake8-pytest-style
 isort
 mypy
+authlib
+email-validator >= 2.0
+sphinx
 groq
+redis

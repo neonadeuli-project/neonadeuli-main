@@ -1,4 +1,5 @@
 import logging
+import os
 import sys
 from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
@@ -7,7 +8,7 @@ from src.main.core.config import settings
 
 
 def setup_logging():
-    log_dir = Path(settings.LOG_DIR)
+    log_dir = Path(getattr(settings, 'LOG_DIR', os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "logs")))
     log_dir.mkdir(parents=True, exist_ok=True)
     log_file = log_dir / "neonadeuli.log"
 
