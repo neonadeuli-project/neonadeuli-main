@@ -435,51 +435,51 @@ def generate_reviews(pr_files, repo, pr_number, latest_commit_id, github_token):
         logger.warning("리뷰할 코드가 없습니다. 모든 파일 내용을 가져오는 데 실패했습니다.")
         return None, []
 
-    pr_context = get_pr_context(repo, pr_number, github_token)
-    commit_messages = get_commit_messages(repo, pr_number, github_token)
-    changed_files = get_changed_files(repo, pr_number, github_token)
+    # pr_context = get_pr_context(repo, pr_number, github_token)
+    # commit_messages = get_commit_messages(repo, pr_number, github_token)
+    # changed_files = get_changed_files(repo, pr_number, github_token)
     
     # 개선된 리뷰 프롬프트 생성
-    review_prompt = get_review_prompt(all_code, pr_context, commit_messages, changed_files)
+    # review_prompt = get_review_prompt(all_code, pr_context, commit_messages, changed_files)
 
     # 전체 코드에 대한 상세한 리뷰
-    overall_review = review_code_groq(review_prompt)
+    #overall_review = review_code_groq(review_prompt)
 
     # 중요 파일에 대한 상세 리뷰 (라인 별 코멘트 비활성화)
-    # for file in important_files:
-    #     logger.info(f"중요 파일 상세 리뷰 중: {file['filename']}")
-    #     if file['status'] == 'removed':
-    #         file_review = f"파일 '{file['filename']}'이(가) 삭제되었습니다. 이 변경이 적절한지 확인해 주세요."
-    #     else:
-    #         content = requests.get(file['raw_url']).text
-    #         file_review_prompt = get_file_review_prompt(file['filename'], content)
-    #         file_review = review_code_groq(file_review_prompt)
+    for file in important_files:
+        logger.info(f"중요 파일 상세 리뷰 중: {file['filename']}")
+        if file['status'] == 'removed':
+            file_review = f"파일 '{file['filename']}'이(가) 삭제되었습니다. 이 변경이 적절한지 확인해 주세요."
+        else:
+            content = requests.get(file['raw_url']).text
+            file_review_prompt = get_file_review_prompt(file['filename'], content)
+            file_review = review_code_groq(file_review_prompt)
         
-    #     # 파일 전체에 대한 리뷰 코멘트
-    #     post_file_comment(
-    #         repo,
-    #         pr_number,
-    #         latest_commit_id,
-    #         file['filename'],
-    #         file_review,
-    #         github_token
-    #     )
+        # 파일 전체에 대한 리뷰 코멘트
+        post_file_comment(
+            repo,
+            pr_number,
+            latest_commit_id,
+            file['filename'],
+            file_review,
+            github_token
+        )
 
-    #     # 라인 별 코멘트
-    #     line_comments_prompt = get_line_comments_prompt(file['filename'], content)
-    #     line_comments = review_code_groq(line_comments_prompt)
+        # 라인 별 코멘트
+        # line_comments_prompt = get_line_comments_prompt(file['filename'], content)
+        # line_comments = review_code_groq(line_comments_prompt)
 
-    #     post_line_comments(
-    #         repo,
-    #         pr_number,
-    #         latest_commit_id,
-    #         file['filename'],
-    #         file['patch'],
-    #         line_comments,
-    #         github_token
-    #     )
+        # post_line_comments(
+        #     repo,
+        #     pr_number,
+        #     latest_commit_id,
+        #     file['filename'],
+        #     file['patch'],
+        #     line_comments,
+        #     github_token
+        # )
     
-    return overall_review
+    # return overall_review
 
 def post_file_comment(repo, pr_number, commit_sha, file_path, body, token):
     url = f"https://api.github.com/repos/{repo}/pulls/{pr_number}/comments"
