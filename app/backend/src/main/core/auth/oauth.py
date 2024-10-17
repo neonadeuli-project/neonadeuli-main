@@ -1,3 +1,5 @@
+import logging
+
 from asyncio.log import logger
 from authlib.integrations.starlette_client import OAuth
 from src.main.core.exceptions import InternalServerError
@@ -15,7 +17,10 @@ def setup_oauth():
             client_id=settings.GOOGLE_CLIENT_ID,
             client_secret=settings.GOOGLE_CLIENT_SECRET,
             server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
-            client_kwargs={'scope': 'openid email profile'}
+            client_kwargs={
+                'scope': 'openid email profile',
+                'prompt': 'select_account'
+            }
         )
 
         # Naver Oauth 설정
@@ -37,12 +42,13 @@ def setup_oauth():
             access_token_url='https://kauth.kakao.com/oauth/token',
             api_base_url='https://kapi.kakao.com/v2/user/me'
         )
+
+        logging.getLogger('authlib').setLevel(logging.DEBUG)
         
     except Exception as e:
+        logger.error(f"OAuth 설정 중 오류 발생: {str(e)}")
         raise InternalServerError(f"OAuth 설정 중 오류 발생: {str(e)}")
 
     logger.info("Google OAuth 클라이언트가 성공적으로 등록되었습니다.")
-
-    # 여기 다른 OAuth 제공자 설정 추가 가능
 
     return oauth

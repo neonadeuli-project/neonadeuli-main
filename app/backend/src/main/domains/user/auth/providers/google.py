@@ -17,7 +17,7 @@ class GoogleLogin(SocialLoginBase):
         self.token_url = "https://oauth2.googleapis.com/token"
         self.userinfo_url = "https://www.googleapis.com/oauth2/v3/userinfo"
 
-    async def get_authorization_url(self, request: Request, state: str) -> str:
+    async def get_authorization_url(self, request: Request, state_token: str) -> str:
         try:
             redirect_uri = str(request.url_for('auth_callback', provider='google'))
             logger.debug(f"생성된 redirect_uri: {redirect_uri}")
@@ -27,7 +27,7 @@ class GoogleLogin(SocialLoginBase):
                 'response_type': 'code',
                 'scope': 'openid email profile',
                 'redirect_uri': redirect_uri,
-                'state': state,
+                'state': state_token,
                 'prompt': 'select_account'
             }
             
