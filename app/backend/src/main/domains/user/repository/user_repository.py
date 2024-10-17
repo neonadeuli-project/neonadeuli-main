@@ -2,7 +2,6 @@ from asyncio.log import logger
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.main.core.auth.password import hash_password
 from src.main.domains.user.schemas.user import UserCreate
 from src.main.domains.user.models.user import User
 
@@ -20,7 +19,11 @@ class UserRepository:
     
     
     async def create_user(self, user_create: UserCreate) -> User:
-        user = User(**user_create.model_dump(exclude_unset=True))
+        if isinstance(user_create, dict):
+            user_data = user_create
+        else:
+            user_data = user_create.model_dump(exclude_unset=True)
+        user = User(**user_data)
         self.db.add(user)
         await self.db.flush()
         return user
@@ -30,3 +33,4 @@ class UserRepository:
         if not user:
             user = await self.create_user(user_create)
         return user
+    
