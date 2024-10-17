@@ -1,25 +1,36 @@
 from datetime import datetime
-from pydantic import HttpUrl
+from typing import Optional
+from pydantic import HttpUrl, validator
 from .user_base import UserBase
 
 class UserResponse(UserBase):
     id: int
-    profile_image: HttpUrl | None = None
+    profile_image: Optional[str] = None
     is_active: bool
-    last_login: str | None
+    last_login: Optional[str] = None
     created_at: str
 
     class Config:
         from_attributes = True
 
+    @validator('last_login', 'created_at', pre=True)
+    def parse_datetime(cls, value):
+        if isinstance(value, datetime):
+            return value.isoformat()
+        elif isinstance(value, str):
+            return value
+        elif value is None:
+            return None
+        raise ValueError(f'Invalid datetime format: {value}')
+
     @classmethod
-    def from_orm(cls, db_user):
+    def from_orm(cls, user):
         return cls(
-            id=db_user.id,
-            email=db_user.email,
-            name=db_user.name,
-            profile_image=db_user.profile_image,
-            is_active=db_user.is_active,
-            last_login=db_user.last_login.isoformat() if isinstance(db_user.last_login, datetime) else db_user.last_login,
-            created_at=db_user.created_at.isoformat() if isinstance(db_user.created_at, datetime) else db_user.created_at
+            id=user.id,
+            email=user.email,
+            name=user.name,
+            profile_image=str(user.profile_image) if user.profile_image else None,
+            is_active=user.is_active,
+            last_login=cls.parse_datetime(user.last_login),
+            created_at=cls.parse_datetime(user.created_at)
         )
