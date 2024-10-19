@@ -1,12 +1,9 @@
+import os
+from pathlib import Path
 from typing import Annotated, Any
 from dotenv import load_dotenv
 
-# load .env file
-load_dotenv()
-
 from pydantic import (
-    PostgresDsn,
-    computed_field,
     AnyUrl,
     BeforeValidator
 )
@@ -16,7 +13,10 @@ from pydantic_settings import (
     SettingsConfigDict
 )
 
-from pydantic_core import MultiHostUrl
+current_dir = Path(__file__).resolve().parent
+backend_dir = current_dir.parent.parent.parent
+env_path = backend_dir / '.env'
+load_dotenv()
 
 def parse_cors(v: Any) -> list[str] | str:
     if isinstance(v, str) and not v.startswith("["):
@@ -27,65 +27,57 @@ def parse_cors(v: Any) -> list[str] | str:
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env", env_ignore_empty=True, extra="ignore"
+        env_file=".env", 
+        env_ignore_empty=True, 
+        extra="ignore",
+        env_file_encoding="utf-8"
     )
 
-    # API_V1_STR: str
-    #
-    # BACKEND_CORS_ORIGINS: Annotated[
-    #     list[AnyUrl] | str, BeforeValidator(parse_cors)
-    # ]
-    # BACKEND_SESSION_SECRET_KEY : str
-
+    # Info
     PROJECT_NAME : str
+    API_V1_STR: str
+    LOG_DIR: str = os.path.join(os.path.dirname(os.path.abspath(__file__)))
+    
+    # Server
+    BACKEND_CORS_ORIGINS: Annotated[
+        list[AnyUrl] | str, BeforeValidator(parse_cors)
+    ]
+    BACKEND_SESSION_SECRET_KEY : str
 
-    # DATABASE_URL : str
+    # DB
+    SQLALCHEMY_DATABASE_URI: str
+    REDIS_HOST: str
+    REDIS_PORT: int
+    REDIS_PWD: str
 
-    # PostgreSQL 설정
-    POSTGRES_USER: str
-    POSTGRES_PASSWORD: str
-    POSTGRES_SERVER: str
-    POSTGRES_PORT: int
-    POSTGRES_DB: str
+    # Oauth2.0
+    GOOGLE_CLIENT_ID: str
+    GOOGLE_CLIENT_SECRET: str
+    GOOGLE_REDIRECT_URI: str
+    GOOGLE_AUTHORIZE_URL: str
+    GOOGLE_TOKEN_URL: str
+    GOOGLE_USERINFO_URL: str
 
-    # 클로바 스튜디오 API
-    # CLOVA_API_KEY : str
-    # CLOVA_API_KEY_PRIMARY_VAL : str
-    # CLOVA_SLIDING_API_HOST : str
-    # CLOVA_COMPLETION_API_HOST : str
-    # MAX_TOKEN : int
+    NAVER_CLIENT_ID: str
+    NAVER_CLIENT_SECRET: str
+    NAVER_REDIRECT_URI: str
+    NAVER_AUTHORIZE_URL: str
+    NAVER_TOKEN_URL: str
+    NAVER_USERINFO_URL: str
 
-    # 네이버 클라우드 클로바 보이스 API
-    # CLOVA_VOICE_URL : str
-    # CLOVA_VOICE_CLIENT_ID : str
-    # CLOVA_VOICE_CLIENT_SECRET : str
+    KAKAO_REST_API_KEY: str
+    KAKAO_CLIENT_SECRET: str
+    KAKAO_REDIRECT_URI: str
+    KAKAO_AUTHORIZE_URL: str
+    KAKAO_TOKEN_URL: str
+    KAKAO_USERINFO_URL: str
 
-    # 네이버 클라우드 서버 및 이미지
-    # NCP_ACCESS_KEY : str
-    # NCP_SECRET_KEY : str
-    # NCP_REGION : str
-    # NCP_ENDPOINT : str
-    # BUCKET_NAME : str
-    # CDN_DOMAIN : str
-
-    # 로그인 보안 관리
-    # SECRET_KEY : str
-    # ALGORITHM : str
-    # ACCESS_TOKEN_EXPIRE_MINUTES : int
-
-    # 기본 이미지 URL
-    # DEFAULT_IMAGE_URL : str
-
-    @computed_field
-    @property
-    def SQLALCHEMY_DATABASE_URI(self) -> PostgresDsn:
-        return MultiHostUrl.build(
-            scheme="postgresql+asyncpg",
-            username=self.POSTGRES_USER,
-            password=self.POSTGRES_PASSWORD,
-            host=self.POSTGRES_SERVER,
-            port=self.POSTGRES_PORT,
-            path=f"{self.POSTGRES_DB}",
-        )
+    ACCESS_TOKEN_EXPIRE_MINUTES: int
+    REFRESH_TOKEN_EXPIRE_DAYS: int
+    OAUTH_STATE_EXPIRE_SECONDS: int
+    
+    # Token
+    SECRET_KEY: str
+    ALGORITHM: str
 
 settings = Settings()

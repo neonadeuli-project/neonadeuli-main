@@ -135,7 +135,7 @@ jobs:
           current_time=$(date --utc +%Y-%m-%dT%H:%M:%SZ)
           merge_notification=$(jq -n \
             --arg title "병합 준비 완료!" \
-            --arg description "$mentions\n\n다음 PR들이 모든 리뷰를 통과하여 병합 준비가 완료되었습니다:\n$pr_list" \
+            --arg description "$mentions\\\\n\\\\n다음 PR들이 모든 리뷰를 통과하여 병합 준비가 완료되었습니다:\\n$pr_list" \
             --arg thumbnail "https://github.com/user-attachments/assets/5bbf4cfb-67a9-402b-969e-8fb142c37f0f" \
             --arg author_name "PR MERGE BOT" \
             --arg author_icon "https://avatars.githubusercontent.com/u/9919?s=200&v=4" \
