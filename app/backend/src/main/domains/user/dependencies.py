@@ -22,7 +22,8 @@ def get_redis_token_manager() -> TokenRepository:
 
 def get_auth_service(
         user_service: UserService = Depends(get_user_service),
+        user_repository: UserRepository = Depends(get_user_repository),
         token_manager: TokenRepository = Depends(get_redis_token_manager)
 ):
     from src.main.domains.user.service.auth_service import AuthService
-    return AuthService(user_service, token_manager)
+    return AuthService(user_service, user_repository, token_manager)

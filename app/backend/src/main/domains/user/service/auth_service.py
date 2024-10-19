@@ -1,3 +1,4 @@
+from hmac import compare_digest
 import json
 import logging
 import secrets
@@ -31,8 +32,9 @@ from src.main.core.auth.jwt import (
 logger = logging.getLogger(__name__)
 
 class AuthService:
-    def __init__(self, user_service: UserService, token_repository: TokenRepository):
+    def __init__(self, user_service: UserService, user_repository: UserRepository, token_repository: TokenRepository):
         self.user_service = user_service
+        self.user_repository = user_repository
         self.token_repository = token_repository
 
     async def initialize_social_login(self, provider: str) -> str:
@@ -72,14 +74,14 @@ class AuthService:
             logger.info(f"Generated tokens - Access: {access_token[:10]}..., Refresh: {refresh_token[:10]}...")
 
             # Refresh token 저장
-            self.token_repository.store_refresh_token(
+            await self.token_repository.store_refresh_token(
                 str(user.id),
                 refresh_token,
                 settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
             )
 
             # 사용된 OAuth 상태 삭제
-            self.token_repository.delete_oauth_state(state)
+            await self.token_repository.delete_oauth_state(state)
 
             user_data = UserResponse.from_orm(user).model_dump()
             encoded_user_data = urllib.parse.quote(json.dumps(user_data))
@@ -87,7 +89,7 @@ class AuthService:
             redirect_url = f"http://localhost:3000/dashboard?user={encoded_user_data}"
             
             response = RedirectResponse(url=redirect_url)
-
+            
             response.set_cookie(
                 key="access_token", 
                 value=access_token, 
@@ -131,11 +133,11 @@ class AuthService:
             user_id = payload.get("sub")
 
             # 저장된 refresh token과 비교
-            stored_token = self.token_repository.get_refresh_token(str(user_id))
-            if stored_token != old_refresh_token:
+            stored_token = await self.token_repository.get_refresh_token(str(user_id))
+            if not compare_digest(stored_token, old_refresh_token):
                 raise AuthenticationError("Refresh Token이 일치하지 않습니다.")
 
-            user = await self.user_repository.get_by_id(user_id)
+            user = await self.user_repository.get_by_id(int(user_id))
             if not user:
                 raise NotFoundError("유저를 찾을 수 없습니다.")
             
@@ -174,12 +176,12 @@ class AuthService:
             logger.exception(f"Unexpected error in refresh_token: {str(e)}")
             raise InternalServerError(f"예상치 못한 에러 발생: {str(e)}")
 
-    async def logout(self, token: str, user_email: str):
+    async def logout(self, token: str, user_id: str):
         try:
-            logger.info(f"Attempting to logout user: {user_email}")
+            logger.info(f"Attempting to logout user: {user_id}")
             await self.token_repository.blacklist_token(token)
-            await self.token_repository.delete_refresh_token(user_email)
-            logger.info(f"이메일이 {user_email} 인 유저가 성공적으로 로그아웃했습니다.")
+            await self.token_repository.delete_refresh_token(user_id)
+            logger.info(f"유저 ID가 {user_id} 인 유저가 성공적으로 로그아웃했습니다.")
         except Exception as e:
             logger.error(f"로그아웃 과정 도중 에러 발생: {str(e)}", exc_info=True)
             raise InternalServerError(f"로그아웃 처리 중 예상치 못한 에러 발생: {str(e)}")

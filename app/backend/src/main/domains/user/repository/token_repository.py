@@ -8,25 +8,25 @@ class TokenRepository:
     def __init__(self, redis_client: aioredis.Redis):
         self.redis_client = redis_client
 
-    async def store_refresh_token(self, user_email: str, token: str, expire_time: int):
+    async def store_refresh_token(self, user_id: str, token: str, expire_time: int):
         """refresh 토큰 저장"""
-        key = f"user {user_email}:refresh_token"
+        key = f"user:{user_id}:refresh_token"
         result = await self.redis_client.setex(key, expire_time, token)
-
         if result:
-            logger.info(f"유저 email {user_email}가 성공적으로 refresh 토큰을 저장했습니다.")
+            logger.info(f"유저 ID {user_id}가 성공적으로 refresh 토큰을 저장했습니다.")
         else:
-            logger.error(f"유저 email {user_email}가 refresh 토큰을 저장하는데 실패했습니다.")
+            logger.error(f"유저 ID {user_id}가 refresh 토큰을 저장하는데 실패했습니다.")
 
     async def get_refresh_token(self, user_id: str) -> str:
-        """Retrieve a refresh token"""
-        return await self.redis_client.get(f"refresh_token: {user_id}")
+        """refresh 토큰 조회"""
+        key = f"user:{user_id}:refresh_token"
+        return await self.redis_client.get(key)
     
-    async def delete_refresh_token(self, user_email: str):
-        """Delete a refresh token"""
+    async def delete_refresh_token(self, user_id: str):
+        """refresh 토큰 삭제"""
         try:
-            await self.redis_client.delete(f"refresh_token:{user_email}")
-            logger.info(f"Refresh token deleted for user: {user_email}")
+            await self.redis_client.delete(f"user:{user_id}:refresh_token")
+            logger.info(f"Refresh token deleted for user: {user_id}")
         except Exception as e:
             logger.error(f"Error deleting refresh token: {str(e)}", exc_info=True)
             raise
