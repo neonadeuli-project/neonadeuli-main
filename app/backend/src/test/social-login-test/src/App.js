@@ -132,11 +132,27 @@ const useAuth = () => {
     } 
   }, [setAccessToken, setUser]);
 
-  return { user, setUser, accessToken, isLoading, error, fetchUserInfo, refreshAccessToken, logout, checkAuthStatus };
+  return { user, setUser, accessToken, setAccessToken, isLoading, error, setError, fetchUserInfo, refreshAccessToken, logout, checkAuthStatus };
 };
 
 const AuthProvider = ({ children }) => {
   const auth = useAuth();
+  useEffect(() => {
+    // Function to check if the access token is nearing expiration and refresh it
+    const autoRefreshToken = async () => {
+      const expirationTime = localStorage.getItem('accessTokenExpiration');
+      const currentTime = new Date().getTime();
+      if (expirationTime && currentTime >= expirationTime) {
+        await auth.refreshAccessToken(); // Use the refresh function from the auth context
+      }
+    };
+
+    // Setup interval or check before every API call
+    const intervalId = setInterval(autoRefreshToken, 5 * 60 * 1000); // Check every 5 minutes
+
+    return () => clearInterval(intervalId);
+  }, [auth]);
+
   return <AuthContext.Provider value={auth}>{children}</AuthContext.Provider>;
 };
 
@@ -155,7 +171,7 @@ const App = () => {
 };
 
 const Dashboard = () => {
-  const { user, isLoading, error, logout, checkAuthStatus } = useContext(AuthContext);
+  const { user, isLoading, error, logout, checkAuthStatus, setUser, setAccessToken, setError } = useContext(AuthContext);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -171,6 +187,35 @@ const Dashboard = () => {
     }
   }, [user, isLoading, navigate]);
 
+  const handleRefreshToken = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/users/token/refresh`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setAccessToken(data.access_token);
+        localStorage.setItem('accessToken', data.access_token);
+        await checkAuthStatus(); // 사용자 정보 업데이트
+      } else {
+        const errorData = await response.json();
+        if (response.status === 401) {
+          // Handle when the refresh token is expired or doesn't match
+          setUser(null);
+          localStorage.removeItem('user');
+          navigate('/');  // Redirect user to login page
+          throw new Error(errorData.detail || '로그인이 만료되었습니다. 다시 로그인해주세요.');
+        } else {
+          throw new Error(errorData.detail || '토큰 갱신에 실패했습니다.');
+        }
+      }
+    } catch (error) {
+      console.error('토큰 갱신 실패:', error);
+      setError(error.message);
+    }
+  };
+
   if (isLoading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
   if (!user) return null;
@@ -179,6 +224,9 @@ const Dashboard = () => {
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">Dashboard</h1>
       <UserInfo user={user} onLogout={logout} />
+      <button onClick={handleRefreshToken} className="bg-blue-500 text-white px-4 py-2 rounded mt-4">
+        토큰 갱신
+      </button>
     </div>
   );
 };
