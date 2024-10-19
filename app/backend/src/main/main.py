@@ -37,11 +37,11 @@ async def app_lifespan(app: FastAPI):
     setup_oauth()
     # Redis 연결 확인
     try:
-        redis_client.ping()
-        logger.info("Redis 서버 연결 성공")
+        await redis_client.ping()
+        logger.info("Redis 서버 연결 성공!")
 
         # Redis 리셋
-        # redis_client.flushall()
+        # await redis_client.flushall()
         # logger.info("Redis 리셋 완료")
     except redis.exceptions.ConnectionError as e:
         logger.error(f"Redis 서버 연결 실패: {e}")
@@ -61,7 +61,17 @@ async def app_lifespan(app: FastAPI):
     logger.info("애플리케이션 시작 프로세스 완료")
     yield
     # 애플리케이션 종료 시 실행될 로직 (필요한 경우)
+    # 애플리케이션 종료 시 실행될 로직
+    logger.info("애플리케이션 종료 프로세스 시작")
+    
+    # Redis 연결 종료
+    try:
+        await redis_client.close()
+        logger.info("Redis 연결 종료 완료!")
+    except Exception as e:
+        logger.error(f"Redis 연결 종료 중 오류 발생: {e}")
 
+    logger.info("애플리케이션 종료 프로세스 완료")
 
 def create_application() -> FastAPI:
     app = FastAPI(
