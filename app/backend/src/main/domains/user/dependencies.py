@@ -17,7 +17,7 @@ def get_user_repository(db: AsyncSession = Depends(get_db)) -> UserRepository:
 def get_user_service(db: AsyncSession = Depends(get_db)) -> UserService:
     return UserService(db)
 
-def get_redis_token_manager(redis_client: Redis = Depends(get_redis_client)) -> TokenRepository:
+def get_redis_token_manager() -> TokenRepository:
     return TokenRepository(redis_client)
 
 def get_auth_service(

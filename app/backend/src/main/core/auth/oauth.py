@@ -40,7 +40,8 @@ def setup_oauth():
             client_secret=settings.KAKAO_CLIENT_SECRET,
             authorize_url='https://kauth.kakao.com/oauth/authorize',
             access_token_url='https://kauth.kakao.com/oauth/token',
-            api_base_url='https://kapi.kakao.com/v2/user/me'
+            api_base_url='https://kapi.kakao.com/v2/user/me',
+            client_kwargs={'scope': 'profile_nickname profile_image account_email'}
         )
 
         logging.getLogger('authlib').setLevel(logging.DEBUG)

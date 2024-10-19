@@ -1,16 +1,17 @@
 import logging
 from asyncio.log import logger
+from typing import Tuple
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 
-from src.main.core.auth.jwt import verify_token
-from src.main.domains.user.service.user_service import UserService
+from src.main.domains.user.repository.user_repository import UserRepository
 from src.main.domains.user.schemas.user.user_response import UserResponse
 from src.main.domains.user.service.auth_service import AuthService
-from src.main.core.config import settings
 from src.main.domains.user.models.user import User
-from src.main.core.auth.dependencies import get_current_user, oauth2_scheme
+from src.main.core.config import settings
+from src.main.core.auth.jwt import verify_token
+from src.main.core.auth.dependencies import get_current_user
 from src.main.core.exceptions import (
     AuthenticationError,
     InternalServerError, 
@@ -18,23 +19,22 @@ from src.main.core.exceptions import (
     ValidationError
 )
 
-from .dependencies import get_auth_service, get_user_service
+from .dependencies import get_auth_service, get_user_repository
 
 router = APIRouter()
 
 logging.basicConfig(level=logging.DEBUG)
 
+
 @router.get("/login/{provider}")
 async def social_login(
-    request: Request,
     provider: str,
     auth_service: AuthService = Depends(get_auth_service)
 ):
     try:
-        response_data = await auth_service.initialize_social_login(request, provider)
-        logger.debug(f"생성된 response_data: {response_data['auth_url']}")
-
-        return JSONResponse(content=response_data)
+        auth_url = await auth_service.initialize_social_login(provider)
+        logger.info(f"Auth URL을 성공적으로 생성했습니다. provider: {provider}, auth_url {auth_url}")
+        return JSONResponse(content={"auth_url": auth_url})
     except ValueError:
         raise ValidationError(f"지원하지 않는 제공자 : {provider}")
     except Exception as e:
@@ -66,11 +66,15 @@ async def auth_callback(
 @router.post("/token/refresh")
 async def refresh_token(
     request: Request,
-    response: Response,
     auth_service: AuthService = Depends(get_auth_service)
 ):
+    refresh_token = request.cookies.get("refresh_token")
+    if not refresh_token:
+        raise AuthenticationError("Refresh token을 찾을 수 없습니다.")
+    
     try:
         new_tokens = await auth_service.refresh_token(request)
+        response = JSONResponse(content={"access_token": new_tokens["access_token"]})
         response.set_cookie(
             key="refresh_token",
             value=new_tokens["refresh_token"],
@@ -79,10 +83,7 @@ async def refresh_token(
             samesite="lax",
             max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
         )
-        return {
-            "access_token": new_tokens["access_token"],
-            "token_type": "bearer"
-        }
+        return response
     except AuthenticationError as e:
         if str(e) == "Refresh Token이 존재하지 않습니다.":
             raise HTTPException(status_code=401, detail="No refresh token found")
@@ -94,44 +95,49 @@ async def refresh_token(
 
 @router.get("/info", response_model=UserResponse)
 async def read_user_info(
-    request: Request,
-    user_service: UserService = Depends(get_user_service)
+    request: Request, 
+    user_repository: UserRepository = Depends(get_user_repository)
 ):
     user = request.state.user
-    logger.info(f"UserInfo 조회를 시도했습니다. request state 안 User: {user}")
+    logger.info(f"UserInfo 조회 시도. User: {user.id if user else 'None'}")
+
     if not user:
-        logger.warning("request state 에서 유저를 찾을 수 없습니다.")
-        authorization: str = request.headers.get("Authorization")
-        if authorization and authorization.startswith("Bearer "):
-            token = authorization.split(" ")[1]
-            try:
-                payload = verify_token(token)
-                user_id = payload.get("sub")
-                user = await user_service.get_user_by_id(user_id)
-                if user:
-                    logger.info(f"ID가 {user_id}인 유저를 찾았습니다.")
-                else:
-                    logger.warning(f"ID가 {user_id}인 유저를 찾을 수 없습니다.")
-            except Exception as e:
-                logger.error(f"토큰 인증 실패: {str(e)}")
+        token = request.cookies.get("access_token")
+        if not token:
+            raise HTTPException(status_code=401, detail="No access token provided")
+        
+        try:
+            payload = verify_token(token)
+            email = payload.get("sub")
+            user = await user_repository.get_by_email(email)
+            
+            logger.info(f"Verifying token: {token[:10]}...")
+            logger.info(f"Payload: {payload}")
+            logger.info(f"User found: {user}")
+        except Exception as e:
+            logger.error(f"토큰 검증 실패: {str(e)}")
+            raise AuthenticationError("유효하지 않은 토큰입니다.", {str(e)})
+
     if not user:
-        raise AuthenticationError("인증되지 않은 사용자입니다.")
+        raise NotFoundError("유저를 찾을 수 없습니다.")
     
-    logger.info(f"사용자 ID가 {user.id}인 유저 정보를 반환합니다.")
+    logger.info(f"유저 정보 반환: ID {user.id}")
     return UserResponse.from_orm(user)
 
 @router.post("/logout")
 async def logout(
-    current_user: User = Depends(get_current_user),
-    token: str = Depends(oauth2_scheme),
+    current_user_and_token: Tuple[User, str] = Depends(get_current_user),
     auth_service: AuthService = Depends(get_auth_service),
 ):
-    try:
-        await auth_service.logout(current_user.id, token)
-        return {"message": "로그아웃 성공"}
+    current_user, token = current_user_and_token
+    try:    
+        await auth_service.logout(token, current_user.email)
+
+        response = JSONResponse(content={"message": "로그아웃 성공"})
+        response.delete_cookie(key="access_token")
+        response.delete_cookie(key="refresh_token")
+        return response
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="로그아웃 처리 중 오류가 발생했습니다."
-        )
+        logger.error(f"로그아웃 에러 발생: {str(e)}", exc_info=True)
+        raise InternalServerError("로그아웃 처리 중 오류가 발생했습니다.")
 
