@@ -1,0 +1,10 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  /* 버튼 hover시 공통 적용할 css */
+  .btn {
+    @apply hover:brightness-90 active:brightness-75 transition duration-300;
+  }
+}
