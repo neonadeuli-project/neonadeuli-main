@@ -1,0 +1,25 @@
+html,
+body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  background-color: #fff;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.container {
+  width: 375px;
+  min-height: 100vh;
+  background-color: #f0f0f0; /* 영역 test 색상 */
+  position: relative;
+}
+
+* {
+  box-sizing: border-box;
+}
